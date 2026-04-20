@@ -10,8 +10,8 @@ and the eval framework from [`../specs/06_evaluation_framework.md`](../specs/06_
 pipeline_and_tests/
 ├── params.py                   Parameters (ref specs/03 §6). Changing a value
 │                               here without amending the spec breaks the contract.
-├── run.py                      Orchestrator — DuckDB-first (reviewer-friendly);
-│                               BigQuery engine reserved for v1.5.
+├── run.py                      BigQuery orchestrator — runs the 13 models
+│                               and exports each as parquet for DQ/evals/dashboard.
 ├── sql/
 │   ├── staging/                4 typed mirrors of the raw CSVs
 │   ├── intermediate/           orphan split (D05), active-contract aggregation
@@ -22,16 +22,10 @@ pipeline_and_tests/
 │   └── run_dq.py               16 assertions in two severity tiers (block/warn)
 ├── evals/
 │   └── run_evals.py            12 checks across T1/T2/T3/T4 from spec 06
-└── data/                       (gitignored) generated parquet + duckdb artifact
+└── data/                       (gitignored) parquet exports of every model
 ```
 
 ## Run
-
-The same 13 models run against either BigQuery (the warehouse the
-assignment calls out) or DuckDB (a local mirror — same SQL, same
-numbers, no cloud creds needed). Pick one:
-
-### BigQuery path (primary — matches the brief)
 
 Two BQ datasets by design:
 
@@ -59,25 +53,17 @@ python data_generation/generate_data.py
 GOOGLE_CLOUD_PROJECT=<your-project> \
   python data_generation/upload_to_bq.py
 
-# 3. Run the pipeline — reads gtm_analytics, writes gtm_metric
-GOOGLE_CLOUD_PROJECT=<your-project> PIPELINE_ENGINE=bigquery \
+# 3. Run the pipeline — reads gtm_analytics, writes gtm_metric,
+#    exports every model as parquet under pipeline_and_tests/data/
+GOOGLE_CLOUD_PROJECT=<your-project> \
   python pipeline_and_tests/run.py
 
-# 4. DQ + evals (read the BQ-exported parquet)
+# 4. DQ + evals read the parquet exports (no BQ round-trip)
 python pipeline_and_tests/dq/run_dq.py
 python pipeline_and_tests/evals/run_evals.py
 ```
 
-### DuckDB path (local mirror — for the reviewer)
-
-```bash
-python data_generation/generate_data.py
-python pipeline_and_tests/run.py           # DuckDB by default
-python pipeline_and_tests/dq/run_dq.py
-python pipeline_and_tests/evals/run_evals.py
-```
-
-Expected output on a clean run (either engine):
+Expected output on a clean run:
 
 ```
 [pipeline] 13 models executed
@@ -89,44 +75,32 @@ Expected output on a clean run (either engine):
 [evals]    12 checks      pass=12  fail=0
 ```
 
-BigQuery and DuckDB produce byte-identical metric outputs — verified
-against a personal GCP sandbox (`<your-project>.gtm_analytics`).
+## Why parquet exports (not BQ round-trips)
 
-## Why the same SQL runs on both engines
+Every model run writes a parquet snapshot to
+`pipeline_and_tests/data/<table>.parquet`. The DQ suite, eval harness,
+and dashboard read parquet locally rather than hitting BigQuery on every
+invocation. Reasons:
 
-The 13 `.sql` files are written once. A thin dialect adapter in
-`run.py::_translate_to_bq()` rewrites four DuckDB-isms that BigQuery
-rejects before the query is submitted:
+- **Deterministic.** A rerun of the pipeline produces byte-identical
+  parquet, which is how D07 (immutable snapshot) is asserted in CI.
+- **Fast dashboard.** Streamlit renders instantly; no BQ latency, no
+  per-session cost.
+- **Reviewer-friendly.** DQ and evals run cold without re-auth; useful
+  when iterating on an assertion without re-querying BQ.
 
-| DuckDB | BigQuery |
-|---|---|
-| `DATE_DIFF('day', start, end)` | `DATE_DIFF(end, start, DAY)` |
-| `CAST(x AS DOUBLE)`  | `CAST(x AS FLOAT64)` |
-| `CAST(x AS VARCHAR)` | `CAST(x AS STRING)` |
-| `CAST(x AS BIGINT)`  | `CAST(x AS INT64)` |
+The warehouse is still BigQuery — the parquet files are an export, not a
+second engine.
 
-The fifth divergence — interval arithmetic (`DATE '…' - INTERVAL '90' DAY`)
-— is sidestepped by precomputing `window_start` and `m1_end` in Python
-(`run.py::_render()`) and passing them as date params, so the SQL only
-ever sees `DATE '2026-01-18'`-style literals that both engines parse
-the same way.
+## Determinism
 
-Determinism is preserved on both sides:
-- AS_OF_DATE is constant (`params.py`), no `NOW()` / `CURRENT_DATE()`
+- `AS_OF_DATE` is a constant (`params.py`). No `NOW()` / `CURRENT_DATE()`
   / `RANDOM()` in any model.
-- A rerun of the pipeline produces byte-identical parquet exports,
-  which lets us assert D07 (immutable snapshot) in CI.
-
-## Why DuckDB is the local mirror (not the primary)
-
-The assignment brief calls out BigQuery, so BQ is the source of truth.
-DuckDB stays in the repo because:
-- A reviewer without a GCP project can clone and run the full stack in
-  under a minute — no auth, no billing, no sandbox 60-day partition
-  expiration (D09) to trip on.
-- The same `.sql` files run on both engines, so the DuckDB path is a
-  regression guard: if a model diverges between the two, the parquet
-  exports won't match and evals will flag it.
+- Window bounds (`window_start`, `m1_end`) precomputed in Python
+  (`run.py::_render()`) and passed as DATE literals so the SQL is a flat
+  string — no INTERVAL arithmetic.
+- Seeded generator + typed loads + deterministic SQL → byte-identical
+  parquet across reruns.
 
 ## Parameter hygiene
 

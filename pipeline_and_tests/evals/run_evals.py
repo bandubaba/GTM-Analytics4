@@ -283,19 +283,13 @@ def check_new_logo_protection(df: pd.DataFrame) -> Result:
 def check_orphan_exclusion(df: pd.DataFrame) -> Result:
     """D05: orphan usage must not influence cARR. Verify by comparing total credits
     in int_usage_rolled to int_orphan_usage 'valid' class."""
-    import duckdb
-    db = DATA_DIR / "carr.duckdb"
-    con = duckdb.connect(str(db), read_only=True)
-    valid_total = con.execute(
-        "SELECT SUM(credits_consumed) FROM int_orphan_usage WHERE usage_class='valid'"
-    ).fetchone()[0]
-    rolled_total = con.execute("SELECT SUM(credits_90d) FROM int_usage_rolled").fetchone()[0]
-    orphan_total = con.execute(
-        "SELECT SUM(credits_consumed) FROM int_orphan_usage WHERE usage_class<>'valid'"
-    ).fetchone()[0]
-    con.close()
+    orphan = pd.read_parquet(DATA_DIR / "int_orphan_usage.parquet")
+    rolled = pd.read_parquet(DATA_DIR / "int_usage_rolled.parquet")
+    valid_total = orphan.loc[orphan.usage_class == "valid", "credits_consumed"].sum()
+    orphan_total = orphan.loc[orphan.usage_class != "valid", "credits_consumed"].sum()
+    rolled_total = rolled["credits_90d"].sum()
     # The rolled total is a subset of valid_total (90d window), must not exceed it.
-    passed = (rolled_total is None or valid_total is None or rolled_total <= valid_total + 1e-6)
+    passed = rolled_total <= valid_total + 1e-6
     return Result(
         "T4c orphan credits excluded from metric (D05)",
         "T4",

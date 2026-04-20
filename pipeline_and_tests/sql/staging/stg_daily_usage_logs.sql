@@ -7,5 +7,5 @@ SELECT
     log_id,
     account_id,
     CAST(date AS DATE) AS usage_date,
-    CAST(compute_credits_consumed AS DOUBLE) AS credits_consumed
+    CAST(compute_credits_consumed AS FLOAT64) AS credits_consumed
 FROM raw_daily_usage_logs;

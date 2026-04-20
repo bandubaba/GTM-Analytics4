@@ -8,11 +8,11 @@ SELECT
     account_id,
     CAST(start_date AS DATE) AS start_date,
     CAST(end_date   AS DATE) AS end_date,
-    CAST(annual_commit_dollars AS DOUBLE) AS annual_commit_dollars,
-    CAST(included_monthly_compute_credits AS BIGINT) AS included_monthly_credits,
+    CAST(annual_commit_dollars AS FLOAT64) AS annual_commit_dollars,
+    CAST(included_monthly_compute_credits AS INT64) AS included_monthly_credits,
     -- Active means AS_OF_DATE falls within [start_date, end_date] inclusive.
     (CAST(start_date AS DATE) <= DATE '{as_of_date}'
         AND DATE '{as_of_date}' <= CAST(end_date AS DATE)) AS is_active_as_of,
     -- Days elapsed since this specific contract started (signed; negative for future starts).
-    DATE_DIFF('day', CAST(start_date AS DATE), DATE '{as_of_date}') AS contract_age_days
+    DATE_DIFF(DATE '{as_of_date}', CAST(start_date AS DATE), DAY) AS contract_age_days
 FROM raw_contracts;

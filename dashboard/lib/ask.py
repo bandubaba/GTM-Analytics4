@@ -3,10 +3,11 @@
 
 Two modes:
   - offline (default): keyword-based router to a curated set of canned
-    SQL snippets over the pipeline's DuckDB artifact. No network calls,
+    SQL snippets over the pipeline's parquet mart. No network calls,
     no API key. Lets the panel run the full app offline.
-  - llm (ANTHROPIC_API_KEY set): Claude Sonnet generates SQL; the
-    verifier dry-runs on DuckDB before execution (spec 11 §4 verifier).
+  - llm (ANTHROPIC_API_KEY set): Claude Sonnet generates SQL; a verifier
+    dry-runs it locally (EXPLAIN against the parquet mart) before
+    execution (spec 11 §4 verifier).
 
 Both modes return the same object: {question, sql, rows, narration, mode}.
 The dashboard always displays the SQL alongside the narration — per
@@ -130,7 +131,7 @@ def _route_offline(question: str, con: duckdb.DuckDBPyConnection) -> AskResult:
 
 
 # ---------------------------------------------------------------------------
-# LLM mode (optional) — Claude Sonnet, verifier over DuckDB
+# LLM mode (optional) — Claude Sonnet with a local SQL verifier
 # ---------------------------------------------------------------------------
 
 SCHEMA_HINT = """
@@ -161,7 +162,7 @@ Table: mart_dq_summary (single row)
 """
 
 SYSTEM_PROMPT = """You are a SQL generator for a cARR analytics product.
-Respond with ONE SQL query against the DuckDB tables below. Do NOT wrap in markdown.
+Respond with ONE SQL query against the tables below. Do NOT wrap in markdown.
 Do NOT use NOW(), CURRENT_DATE(), or RANDOM(). Do NOT mutate state.
 
 Rules:

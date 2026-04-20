@@ -10,9 +10,8 @@
 --     - utilization_u         = credits_90d / expected_credits_90d
 
 -- Window bounds are precomputed in Python (run.py) and passed as date
--- params ({window_start}, {m1_end}). This keeps the SQL dialect-neutral:
--- DuckDB and BigQuery both accept DATE '...' literals the same way, and
--- we avoid INTERVAL arithmetic which diverges between the two engines.
+-- params ({window_start}, {m1_end}) so the SQL is a flat literal rather
+-- than relying on INTERVAL arithmetic.
 
 CREATE OR REPLACE TABLE int_usage_rolled AS
 WITH valid_usage AS (

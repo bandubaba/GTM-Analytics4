@@ -1,27 +1,32 @@
 """
-Pipeline orchestrator — runs the same 13 SQL models against either
-BigQuery (the warehouse called out in the assignment brief) or DuckDB
-(a local mirror for reviewers without a GCP project).
+Pipeline orchestrator — runs the 13 SQL models against BigQuery (the
+warehouse called out in the brief) and exports each table as parquet
+under pipeline_and_tests/data/ for the DQ suite, eval harness, and
+dashboard to read locally.
 
-Both engines produce identical numbers. The SQL is written once; a thin
-dialect adapter in _translate_to_bq() rewrites the couple of places
-where DuckDB and BigQuery disagree (DATE_DIFF arg order, DOUBLE alias).
+Two-dataset layering (matches the brief's scoping):
+  - BQ_SOURCE_DATASET (default: gtm_analytics)
+      The 4 source tables from the brief — sales_reps, accounts,
+      contracts, daily_usage_logs. Populated by
+      data_generation/upload_to_bq.py; never mutated by run.py.
+  - BQ_WAREHOUSE_DATASET (default: gtm_metric)
+      All pipeline outputs — raw_* bridge views, stg_*, int_*,
+      metric_*, mart_*. Rebuilt on every run.
 
 Usage:
-  # DuckDB (local, no cloud creds needed):
-  python run.py
-  PIPELINE_ENGINE=duckdb python run.py
+    gcloud auth application-default login              # one-time
+    python data_generation/generate_data.py            # 1. seeded CSVs
+    GOOGLE_CLOUD_PROJECT=<proj> \
+      python data_generation/upload_to_bq.py           # 2. load BQ
+    GOOGLE_CLOUD_PROJECT=<proj> \
+      python pipeline_and_tests/run.py                 # 3. 13 models + parquet
 
-  # BigQuery (the primary path — dataset already uploaded by
-  # data_generation/upload_to_bq.py):
-  GOOGLE_CLOUD_PROJECT=... PIPELINE_ENGINE=bigquery python run.py
-  #   optional: BQ_DATASET=gtm_analytics (default), BQ_LOCATION=US (default)
-
-Determinism (both engines):
+Determinism:
   - All inputs are seeded CSVs from data_generation/.
   - AS_OF_DATE is constant (params.py).
-  - No NOW(), CURRENT_DATE(), RANDOM() anywhere in the SQL.
-  - Window bounds are precomputed in Python so the SQL is dialect-neutral.
+  - No NOW(), CURRENT_DATE(), RANDOM() in any model.
+  - Window bounds (window_start, m1_end) precomputed in Python and
+    passed in as DATE literals, avoiding INTERVAL arithmetic.
 
 Refs:
   specs/04_pipeline_architecture.md §3 (layer order), §5 (idempotency)
@@ -29,12 +34,10 @@ Refs:
 from __future__ import annotations
 
 import os
-import re
 import sys
 from datetime import timedelta
 from pathlib import Path
 
-import duckdb
 import pandas as pd
 
 import params
@@ -43,7 +46,6 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 PIPELINE_ROOT = REPO_ROOT / "pipeline_and_tests"
 SQL_ROOT = PIPELINE_ROOT / "sql"
 DATA_OUT = PIPELINE_ROOT / "data"
-RAW_ROOT = REPO_ROOT / "data_generation" / "output"
 
 MODEL_ORDER = [
     # staging
@@ -65,16 +67,19 @@ MODEL_ORDER = [
     "mart/mart_dq_summary.sql",
 ]
 
-EXPORT_MARTS = [
-    "mart_carr_current",
-    "mart_carr_by_rep",
-    "mart_carr_by_region",
-    "mart_dq_summary",
+# Every pipeline-produced table is exported to parquet so that
+# dq/run_dq.py, evals/run_evals.py, and the dashboard can read locally
+# without hitting BQ on every question.
+EXPORT_TABLES = [
+    "stg_sales_reps", "stg_accounts", "stg_contracts", "stg_daily_usage_logs",
+    "int_orphan_usage", "int_account_active_contracts", "int_usage_rolled",
+    "metric_healthscore", "metric_carr",
+    "mart_carr_current", "mart_carr_by_rep", "mart_carr_by_region", "mart_dq_summary",
 ]
 
 # BQ upload lands CSVs under these (unprefixed) table names. The SQL
-# models reference `raw_*`, so in BQ mode we create thin views at the
-# top of the run to bridge the naming.
+# models reference `raw_*`, so we create thin views at the top of the
+# run to bridge the naming without mutating the source dataset.
 BQ_RAW_VIEWS = {
     "raw_sales_reps":       "sales_reps",
     "raw_accounts":         "accounts",
@@ -109,124 +114,39 @@ def _render(sql_path: Path) -> str:
     )
 
 
-# ---------- dialect adapter ----------------------------------------------
+def _fetch_df(client, sql: str) -> pd.DataFrame:
+    """Pull a BQ result into a parquet-safe pandas frame.
 
-_DATE_DIFF_DUCKDB_RE = re.compile(
-    r"DATE_DIFF\(\s*'day'\s*,\s*([^,]+?)\s*,\s*([^)]+?)\s*\)",
-    flags=re.IGNORECASE | re.DOTALL,
-)
-
-
-def _translate_to_bq(sql: str) -> str:
-    """Rewrite the handful of DuckDB-isms that BigQuery rejects.
-
-    1. DATE_DIFF('day', start, end)  →  DATE_DIFF(end, start, DAY)
-       (BigQuery reverses arg order and takes a date-part keyword, not a string.)
-    2. CAST(x AS DOUBLE)             →  CAST(x AS FLOAT64)
-    3. CAST(x AS VARCHAR)            →  CAST(x AS STRING)
-    4. CAST(x AS BIGINT)             →  CAST(x AS INT64)
-       (BigQuery uses its own scalar type names; DuckDB follows the SQL-92 ones.)
-
-    Interval arithmetic diverges too, but we sidestep it by precomputing
-    window_start / m1_end in Python (see int_usage_rolled.sql).
+    BQ's dataframe returns DATE columns as the `dbdate` extension dtype,
+    which pyarrow cannot round-trip through parquet without db-dtypes
+    installed in every reader. Downstream (evals, dashboard) we want
+    plain native dates.
     """
-    sql = _DATE_DIFF_DUCKDB_RE.sub(r"DATE_DIFF(\2, \1, DAY)", sql)
-    sql = re.sub(r"\bAS DOUBLE\b",  "AS FLOAT64", sql, flags=re.IGNORECASE)
-    sql = re.sub(r"\bAS VARCHAR\b", "AS STRING",  sql, flags=re.IGNORECASE)
-    sql = re.sub(r"\bAS BIGINT\b",  "AS INT64",   sql, flags=re.IGNORECASE)
-    return sql
+    df = client.query(sql).result().to_dataframe()
+    for col in df.columns:
+        if str(df[col].dtype) == "dbdate":
+            df[col] = pd.to_datetime(df[col]).dt.date
+    return df
 
 
-# ---------- DuckDB engine ------------------------------------------------
-
-def _load_raw_duckdb(con: duckdb.DuckDBPyConnection) -> None:
-    """Bind CSVs as raw_* tables."""
-    tables = {
-        "raw_sales_reps":       RAW_ROOT / "sales_reps.csv",
-        "raw_accounts":         RAW_ROOT / "accounts.csv",
-        "raw_contracts":        RAW_ROOT / "contracts.csv",
-        "raw_daily_usage_logs": RAW_ROOT / "daily_usage_logs.csv",
-    }
-    for table, path in tables.items():
-        if not path.exists():
-            sys.exit(f"ERROR: raw input missing: {path}\nRun data_generation/generate_data.py first.")
-        con.execute(f"CREATE OR REPLACE TABLE {table} AS SELECT * FROM read_csv_auto('{path}')")
-
-
-def run_duckdb() -> None:
-    DATA_OUT.mkdir(parents=True, exist_ok=True)
-    db_path = DATA_OUT / "carr.duckdb"
-    if db_path.exists():
-        db_path.unlink()  # fresh build; D07 determinism makes this safe
-
-    con = duckdb.connect(str(db_path))
-    print(f"[pipeline] engine=duckdb db={db_path}")
-    print(f"[pipeline] as_of={params.AS_OF_DATE}  trailing={params.TRAILING_WINDOW_DAYS}d")
-
-    _load_raw_duckdb(con)
-    print(f"[pipeline] loaded raw tables from {RAW_ROOT}")
-
-    for rel_path in MODEL_ORDER:
-        sql = _render(SQL_ROOT / rel_path)
-        try:
-            con.execute(sql)
-        except Exception as exc:
-            print(f"\n!!! FAILED: {rel_path}\n{exc}")
-            print("---\nRendered SQL:\n" + sql)
-            raise
-        print(f"[model ok] {rel_path}")
-
-    for mart in EXPORT_MARTS:
-        df = con.execute(f"SELECT * FROM {mart}").df()
-        parquet_path = DATA_OUT / f"{mart}.parquet"
-        df.to_parquet(parquet_path, index=False)
-        print(f"[export]   {mart:<28} rows={len(df):>6}  →  {parquet_path.name}")
-
-    summary = con.execute("SELECT * FROM mart_dq_summary").df().iloc[0]
-    _print_summary(summary)
-
-    con.close()
-
-
-# ---------- BigQuery engine ---------------------------------------------
-
-def run_bigquery() -> None:
-    """Execute the same 13 models against BigQuery.
-
-    Two-dataset layering (matches the brief's scoping):
-      - BQ_SOURCE_DATASET  — exactly the 4 source tables from the brief
-                             (sales_reps, accounts, contracts, daily_usage_logs).
-                             Populated by data_generation/upload_to_bq.py.
-      - BQ_WAREHOUSE_DATASET — everything the pipeline produces
-                               (raw_* bridge views, stg_*, int_*, metric_*, mart_*).
-                               Kept separate so the source dataset stays
-                               the 4-table deliverable the brief asks for.
-
-    Prereqs (one-time):
-      1. `gcloud auth application-default login`
-      2. `GOOGLE_CLOUD_PROJECT=... python data_generation/upload_to_bq.py`
-         loads the 4 CSVs into {project}.{BQ_SOURCE_DATASET}.
-    """
+def main() -> None:
     try:
         from google.cloud import bigquery
     except ImportError:
-        sys.exit("ERROR: google-cloud-bigquery not installed. pip install -r requirements.txt")
+        sys.exit("ERROR: google-cloud-bigquery not installed. pip install -r pipeline_and_tests/requirements.txt")
 
     project = os.environ.get("GOOGLE_CLOUD_PROJECT")
     if not project:
         sys.exit("ERROR: set GOOGLE_CLOUD_PROJECT env var to your BQ project id.")
-    # Source: where upload_to_bq.py landed the 4 raw tables. Still named
-    # BQ_DATASET for backward-compat with the upload script's env var.
     src_ds = os.environ.get("BQ_SOURCE_DATASET",
                             os.environ.get("BQ_DATASET", "gtm_analytics"))
-    # Warehouse: where the pipeline writes stg/int/metric/mart.
     wh_ds = os.environ.get("BQ_WAREHOUSE_DATASET", "gtm_metric")
     location = os.environ.get("BQ_LOCATION", "US")
 
     client = bigquery.Client(project=project, location=location)
     src_ref = f"`{project}.{src_ds}`"
     wh_ref  = f"`{project}.{wh_ds}`"
-    print(f"[pipeline] engine=bigquery project={project}  location={location}")
+    print(f"[pipeline] project={project}  location={location}")
     print(f"[pipeline] source dataset   : {src_ds}  (4 brief-spec tables)")
     print(f"[pipeline] warehouse dataset: {wh_ds}   (pipeline outputs)")
     print(f"[pipeline] as_of={params.AS_OF_DATE}  trailing={params.TRAILING_WINDOW_DAYS}d")
@@ -266,39 +186,18 @@ def run_bigquery() -> None:
     print(f"[pipeline] bridged raw views in {wh_ds}: {', '.join(BQ_RAW_VIEWS.keys())}")
 
     for rel_path in MODEL_ORDER:
-        sql = _translate_to_bq(_render(SQL_ROOT / rel_path))
+        sql = _render(SQL_ROOT / rel_path)
         _exec(sql, rel_path)
         print(f"[model ok] {rel_path}")
 
     DATA_OUT.mkdir(parents=True, exist_ok=True)
-    for mart in EXPORT_MARTS:
-        df = _fetch_df(client, f"SELECT * FROM {wh_ref}.{mart}")
-        parquet_path = DATA_OUT / f"{mart}.parquet"
+    for table in EXPORT_TABLES:
+        df = _fetch_df(client, f"SELECT * FROM {wh_ref}.{table}")
+        parquet_path = DATA_OUT / f"{table}.parquet"
         df.to_parquet(parquet_path, index=False)
-        print(f"[export]   {mart:<28} rows={len(df):>6}  →  {parquet_path.name}")
+        print(f"[export]   {table:<32} rows={len(df):>6}  →  {parquet_path.name}")
 
     summary = _fetch_df(client, f"SELECT * FROM {wh_ref}.mart_dq_summary").iloc[0]
-    _print_summary(summary)
-
-
-def _fetch_df(client, sql: str) -> pd.DataFrame:
-    """Pull a BQ result into a parquet-safe pandas frame.
-
-    BQ's dataframe returns DATE columns as the `dbdate` extension dtype,
-    which pyarrow cannot round-trip through parquet without db-dtypes
-    installed in every reader. Downstream (evals/dashboard) we want plain
-    native dates, matching what the DuckDB path writes.
-    """
-    df = client.query(sql).result().to_dataframe()
-    for col in df.columns:
-        if str(df[col].dtype) == "dbdate":
-            df[col] = pd.to_datetime(df[col]).dt.date
-    return df
-
-
-# ---------- shared helpers ----------------------------------------------
-
-def _print_summary(summary: pd.Series) -> None:
     print("\n[summary]")
     print(f"  accounts in metric       : {summary['n_accounts_in_metric']}")
     print(f"  Committed_ARR (sum)      : ${float(summary['total_committed_arr']):,.0f}")
@@ -311,16 +210,6 @@ def _print_summary(summary: pd.Series) -> None:
     print(f"  healthy accts            : {summary['n_healthy']}")
     print(f"  orphan logs (bad acct)   : {summary['n_orphan_bad_account']}")
     print(f"  orphan logs (out of win) : {summary['n_orphan_out_of_window']}")
-
-
-def main() -> None:
-    engine = os.environ.get("PIPELINE_ENGINE", params.DEFAULT_ENGINE).lower()
-    if engine == "duckdb":
-        run_duckdb()
-    elif engine == "bigquery":
-        run_bigquery()
-    else:
-        sys.exit(f"unknown PIPELINE_ENGINE={engine}")
 
 
 if __name__ == "__main__":

@@ -38,8 +38,8 @@ Two modes, same interface:
 - **Offline (default)** — keyword router to a curated set of canned SQL
   snippets. Works without network or API keys; the panel can run it cold.
 - **LLM** — if `ANTHROPIC_API_KEY` is set, Claude Sonnet generates SQL.
-  Every generated query passes through a DuckDB dry-run verifier before
-  execution (spec 11 §4). Refusals are explicit.
+  Every generated query passes through a local dry-run verifier
+  (EXPLAIN) before execution (spec 11 §4). Refusals are explicit.
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...   # optional
@@ -64,7 +64,7 @@ dashboard/
 ├── app.py              Streamlit entry; routes to views
 ├── requirements.txt
 ├── lib/
-│   ├── data.py         Parquet / DuckDB loaders
+│   ├── data.py         Parquet loaders
 │   ├── narrator.py     Template-based anomaly narrative (spec 11 §3.2)
 │   └── ask.py          NL agent (offline router + optional LLM)
 └── README.md           this file

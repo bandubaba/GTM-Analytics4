@@ -4,8 +4,8 @@
 
 CREATE OR REPLACE TABLE stg_sales_reps AS
 SELECT
-    CAST(rep_id    AS VARCHAR) AS rep_id,
-    CAST(name      AS VARCHAR) AS rep_name,
-    CAST(region    AS VARCHAR) AS region,
-    CAST(segment   AS VARCHAR) AS segment
+    CAST(rep_id    AS STRING) AS rep_id,
+    CAST(name      AS STRING) AS rep_name,
+    CAST(region    AS STRING) AS region,
+    CAST(segment   AS STRING) AS segment
 FROM raw_sales_reps;

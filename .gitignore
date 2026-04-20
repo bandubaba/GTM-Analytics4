@@ -1,7 +1,6 @@
 data_generation/output/
 dashboard/node_modules/
 dashboard/.next/
-pipeline_and_tests/data/*.duckdb
 pipeline_and_tests/data/*.parquet
 .venv/
 __pycache__/

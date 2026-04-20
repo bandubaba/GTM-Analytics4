@@ -13,7 +13,7 @@ Run:
     streamlit run dashboard/app.py
 
 Requires a prior `python pipeline_and_tests/run.py` to populate
-pipeline_and_tests/data/ with the mart parquet + duckdb artifact.
+pipeline_and_tests/data/ with the parquet exports.
 """
 from __future__ import annotations
 
@@ -282,8 +282,8 @@ def view_ask():
     st.caption(
         "Natural-language query layer over the metric mart "
         "(spec 11 §3.1). Offline template mode is always on; setting "
-        "ANTHROPIC_API_KEY enables Claude-generated SQL with a DuckDB "
-        "verifier in front (spec 11 §4)."
+        "ANTHROPIC_API_KEY enables Claude-generated SQL with a local "
+        "verifier (dry-run EXPLAIN) in front (spec 11 §4)."
     )
 
     examples = ask_mod.EXAMPLES

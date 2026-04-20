@@ -8,8 +8,10 @@ Two severity tiers:
               A warn failure means the metric is computable but a
               human should look.
 
-Each assertion is a pure SQL predicate evaluated against the DuckDB
-pipeline artifact (pipeline_and_tests/data/carr.duckdb). Run AFTER run.py.
+Each assertion is a pure SQL predicate evaluated against the parquet
+exports in pipeline_and_tests/data/ (written by run.py). Uses an
+in-memory DuckDB to run SQL over the parquet files locally so the DQ
+suite doesn't have to hit BigQuery on every run.
 
 Usage:
     python dq/run_dq.py
@@ -25,7 +27,15 @@ from pathlib import Path
 import duckdb
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-DB_PATH = REPO_ROOT / "pipeline_and_tests" / "data" / "carr.duckdb"
+DATA_DIR = REPO_ROOT / "pipeline_and_tests" / "data"
+
+# Tables the assertions below reference — must match run.py's EXPORT_TABLES.
+REQUIRED_TABLES = [
+    "stg_sales_reps", "stg_accounts", "stg_contracts", "stg_daily_usage_logs",
+    "int_orphan_usage", "int_account_active_contracts",
+    "metric_healthscore", "metric_carr",
+    "mart_carr_current", "mart_carr_by_rep",
+]
 
 
 @dataclass
@@ -149,15 +159,24 @@ ASSERTIONS: list[Assertion] = [
 ]
 
 
+def _connect_parquet() -> duckdb.DuckDBPyConnection:
+    """Open an in-memory DuckDB and register each pipeline parquet as a view."""
+    con = duckdb.connect(":memory:")
+    for table in REQUIRED_TABLES:
+        path = DATA_DIR / f"{table}.parquet"
+        if not path.exists():
+            sys.exit(f"ERROR: {path} missing. Run `python pipeline_and_tests/run.py` first.")
+        con.execute(f"CREATE VIEW {table} AS SELECT * FROM read_parquet('{path}')")
+    return con
+
+
 def run(strict: bool = False) -> int:
-    if not DB_PATH.exists():
-        sys.exit(f"ERROR: {DB_PATH} missing. Run `python run.py` first.")
-    con = duckdb.connect(str(DB_PATH), read_only=True)
+    con = _connect_parquet()
 
     block_fails: list[Assertion] = []
     warn_fails: list[Assertion] = []
 
-    print(f"[dq] running {len(ASSERTIONS)} assertions against {DB_PATH.name}\n")
+    print(f"[dq] running {len(ASSERTIONS)} assertions against {DATA_DIR}\n")
     for a in ASSERTIONS:
         count = con.execute(a.sql).fetchone()[0]
         passed = count == 0

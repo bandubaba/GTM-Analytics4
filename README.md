@@ -24,13 +24,10 @@ Everything — the formula, the parameters, the pipeline, the eval framework, th
 
 ## What you can run
 
-The same 13 SQL models execute against either **BigQuery** (the warehouse
-the brief calls out) or **DuckDB** (a local mirror for the panel reviewer).
-Both engines produce byte-identical numbers; the SQL is written once and
-a thin dialect adapter (`run.py::_translate_to_bq()`) handles the few
-syntactic divergences.
-
-### BigQuery path (primary — matches the brief)
+The 13 SQL models execute against **BigQuery** (the warehouse the brief
+calls out). `run.py` exports every model as parquet into
+`pipeline_and_tests/data/` so DQ, evals, and the dashboard read locally
+— no BQ round-trip per dashboard click.
 
 ```bash
 git clone https://github.com/bandubaba/GTM-Analytics4.git && cd GTM-Analytics4
@@ -40,21 +37,10 @@ pip install -r pipeline_and_tests/requirements.txt -r dashboard/requirements.txt
 gcloud auth application-default login                          # one-time
 python data_generation/generate_data.py                        # 1. seeded CSVs
 GOOGLE_CLOUD_PROJECT=<your-proj> python data_generation/upload_to_bq.py  # 2. load BQ
-GOOGLE_CLOUD_PROJECT=<your-proj> PIPELINE_ENGINE=bigquery \
-  python pipeline_and_tests/run.py                             # 3. 13 models → BQ
+GOOGLE_CLOUD_PROJECT=<your-proj> python pipeline_and_tests/run.py        # 3. 13 models → BQ + parquet
 python pipeline_and_tests/dq/run_dq.py                         # 4. 16 DQ checks
 python pipeline_and_tests/evals/run_evals.py                   # 5. 12 T1-T4 evals
 streamlit run dashboard/app.py                                 # 6. localhost:8501
-```
-
-### DuckDB path (local mirror — zero cloud credentials)
-
-```bash
-python data_generation/generate_data.py
-python pipeline_and_tests/run.py        # DuckDB is the default engine
-python pipeline_and_tests/dq/run_dq.py
-python pipeline_and_tests/evals/run_evals.py
-streamlit run dashboard/app.py
 ```
 
 Want the AI layer live?
@@ -65,8 +51,7 @@ streamlit run dashboard/app.py                   # "Ask cARR" now uses Claude + 
 ```
 
 Default NL mode is offline (keyword router) so the app runs cold without
-an API key, and the DuckDB path runs cold without a GCP project — the
-panel can always inspect everything end-to-end, even without creds.
+an API key.
 
 ---
 
@@ -94,7 +79,7 @@ GTM-Analytics4/
 │   ├── config.py                    Tunable knobs
 │   └── README.md
 ├── pipeline_and_tests/              dbt-style SQL + DQ + evals
-│   ├── run.py                       Orchestrator — runs same SQL on BQ or DuckDB
+│   ├── run.py                       BQ orchestrator + parquet export
 │   ├── params.py                    Parameters cite spec 03 §6
 │   ├── sql/                         13 models: staging → intermediate → metric → mart
 │   ├── dq/run_dq.py                 16 assertions (block + warn tiers)
@@ -113,10 +98,9 @@ The specs are the source of truth; the code cites them.
 
 ## What the pipeline produces
 
-Running against the seeded dataset (SEED=42, 1000 accounts, ~194K usage rows)
-— numbers below are identical on BigQuery and DuckDB, verified against a
-personal GCP sandbox (source tables in `gtm_analytics`, pipeline outputs
-in `gtm_metric`):
+Running against the seeded dataset (SEED=42, 1000 accounts, ~194K usage rows),
+verified against a personal GCP sandbox (source tables in `gtm_analytics`,
+pipeline outputs in `gtm_metric`):
 
 | Metric | Value |
 |---|---:|
@@ -143,23 +127,23 @@ All 16 DQ assertions pass. All 12 evals (T1 Correctness, T2 Construct validity, 
                         │
                         ▼
                 ┌───────────────────┐
-                │      raw          │   sales_reps · accounts
-                │ BigQuery (primary)│   contracts · daily_usage_logs
-                │ DuckDB  (mirror)  │
+                │   BigQuery raw    │   sales_reps · accounts
+                │  (gtm_analytics)  │   contracts · daily_usage_logs
                 └─────────┬─────────┘
-                          │ same dbt-style SQL, both engines
-                          │ (run.py::_translate_to_bq shim)
+                          │ dbt-style SQL models
                           ▼
               ┌────────────────────────────┐
               │ staging → int → metric     │   deterministic, idempotent
-              └────────────┬───────────────┘   no NOW(), no RANDOM()
+              │  (gtm_metric in BQ)        │   no NOW(), no RANDOM()
+              └────────────┬───────────────┘
                            ▼
                  ┌──────────────────┐          ★ immutable month-end
                  │   mart_carr_*    │──────────→  snapshot (D06)
-                 └────┬─────┬───────┘
-                      │     │
-           ┌──────────┘     └──────────────┐
-           ▼                               ▼
+                 └────────┬─────────┘
+                          │ parquet export (pipeline_and_tests/data/)
+                          ▼
+           ┌──────────────────────────────────┐
+           ▼                                  ▼
     ┌──────────────────┐        ┌───────────────────────┐
     │ Streamlit        │        │ DQ (16)  +  Evals (12)│
     │  5 views +       │        │  block / warn / T1-T4 │
@@ -169,7 +153,7 @@ All 16 DQ assertions pass. All 12 evals (T1 Correctness, T2 Construct validity, 
            │ (LLM mode, optional)
     ┌──────────────────┐
     │  Claude Sonnet   │   system-of-record stays the SQL,
-    │  + DuckDB verifier│  never the LLM (spec 11 §4)
+    │  + SQL verifier  │   never the LLM (spec 11 §4)
     └──────────────────┘
 ```
 

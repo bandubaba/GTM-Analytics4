@@ -17,7 +17,7 @@ SELECT
     SUM(annual_commit_dollars)                    AS active_committed_arr,
     SUM(included_monthly_credits)                 AS included_monthly_credits,
     MIN(start_date)                               AS oldest_active_start,
-    DATE_DIFF('day', MIN(start_date), DATE '{as_of_date}') AS contract_age_days
+    DATE_DIFF(DATE '{as_of_date}', MIN(start_date), DAY) AS contract_age_days
 FROM stg_contracts
 WHERE is_active_as_of = TRUE
 GROUP BY account_id;

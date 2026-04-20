@@ -68,8 +68,3 @@ RAMP_PARAMS: dict[str, dict[str, int]] = {
 # -------- pricing --------
 # Credits → dollars used for overage computation; matches data_generation/config.py.
 PRICE_PER_CREDIT: float = 1.00
-
-# -------- execution mode --------
-# "duckdb" runs locally against CSV/parquet; "bigquery" runs against BQ.
-# The env var PIPELINE_ENGINE overrides at runtime.
-DEFAULT_ENGINE: str = "duckdb"
