@@ -175,6 +175,40 @@ Schema:
 """ + SCHEMA_HINT
 
 
+NARRATION_PROMPT = """You are a GTM business analyst summarizing a SQL result for a CFO / VP Sales audience.
+
+Given a question, the SQL that ran, and a preview of the result rows, write a 1-2 sentence plain-English summary.
+- Lead with the headline number or count — specific figures from the rows, not paraphrase.
+- Use $K / $M formatting for money (e.g., $76.7M, $658K). Use 3-decimal precision for HealthScores (0.816).
+- No markdown, no bullets, no preface ("Here is a summary…"). Output the 1-2 sentences only.
+- Reference the metric definition only if the question is conceptual; otherwise just answer.
+- If the result is empty, say so and offer the likely reason (no matching rows on this snapshot).
+"""
+
+
+def _narrate_llm(client: Any, question: str, sql: str, rows: pd.DataFrame) -> str:
+    """Second-pass narration: ask Claude to summarize rows in plain English."""
+    if rows.empty:
+        preview = "(no rows returned)"
+    else:
+        # Small aggregates → full table; large result sets → head(10) + shape.
+        head = rows.head(10).to_string(index=False, max_colwidth=40)
+        shape = f"\n\n(showing first 10 of {len(rows)} rows, {len(rows.columns)} columns)" if len(rows) > 10 else ""
+        preview = head + shape
+    user_msg = f"Question: {question}\n\nSQL:\n{sql}\n\nResult preview:\n{preview}"
+    try:
+        resp = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=200,
+            system=NARRATION_PROMPT,
+            messages=[{"role": "user", "content": user_msg}],
+        )
+        text = resp.content[0].text.strip() if resp.content else ""
+        return text or f"Query returned {len(rows)} rows."
+    except Exception as e:
+        return f"Query returned {len(rows)} rows. (Narration unavailable: {e})"
+
+
 def _route_llm(question: str, con: duckdb.DuckDBPyConnection, api_key: str) -> AskResult:
     try:
         import anthropic
@@ -207,7 +241,7 @@ def _route_llm(question: str, con: duckdb.DuckDBPyConnection, api_key: str) -> A
                          refusal_reason=f"Verifier rejected the query: {e}",
                          narration="Generated SQL failed dry-run; not executed (spec 11 §4 verifier).")
     rows = con.execute(sql).df()
-    narration = f"Query returned {len(rows)} rows. Inspect the table and SQL below; the metric definition is spec 03."
+    narration = _narrate_llm(client, question, sql, rows)
     return AskResult(question=question, mode="llm", sql=sql, rows=rows, narration=narration)
 
 
