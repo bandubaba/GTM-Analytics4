@@ -180,7 +180,7 @@ NARRATION_PROMPT = """You are a GTM business analyst summarizing a SQL result fo
 Given a question, the SQL that ran, and a preview of the result rows, write a 1-2 sentence plain-English summary.
 - Lead with the headline number or count — specific figures from the rows, not paraphrase.
 - Use $K / $M formatting for money (e.g., $76.7M, $658K). Use 3-decimal precision for HealthScores (0.816).
-- No markdown, no bullets, no preface ("Here is a summary…"). Output the 1-2 sentences only.
+- PLAIN TEXT ONLY. No markdown, no bullets, no backticks, no code spans, no asterisks, no preface ("Here is a summary…"). Account IDs and numbers must appear as plain text (ACC000032, not `ACC000032`). Output the 1-2 sentences only.
 - Reference the metric definition only if the question is conceptual; otherwise just answer.
 - If the result is empty, say so and offer the likely reason (no matching rows on this snapshot).
 """
@@ -204,6 +204,9 @@ def _narrate_llm(client: Any, question: str, sql: str, rows: pd.DataFrame) -> st
             messages=[{"role": "user", "content": user_msg}],
         )
         text = resp.content[0].text.strip() if resp.content else ""
+        # Defensive: strip inline-code backticks and bold/italic markers that
+        # would otherwise render as monospace / styled spans in st.info().
+        text = text.replace("`", "").replace("**", "").replace("__", "")
         return text or f"Query returned {len(rows)} rows."
     except Exception as e:
         return f"Query returned {len(rows)} rows. (Narration unavailable: {e})"
