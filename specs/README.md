@@ -33,7 +33,7 @@ Read top to bottom if this is your first pass. The specs build on each other.
 | 00 | README (this file) | 1.0 | Living | Principal PM | 2026-04-19 |
 | 01 | Problem statement | 0.1 | Draft | Principal PM | 2026-04-19 |
 | 02 | Data model | 0.1 | Draft | Principal PM | 2026-04-19 |
-| 03 | North Star metric | 0.5 | Draft | Principal PM | 2026-04-19 |
+| 03 | North Star metric | 0.6 | Draft | Principal PM | 2026-04-19 |
 | 04 | Pipeline architecture | 0.1 | Draft | Principal PM | 2026-04-19 |
 | 05 | Data quality | 0.1 | Draft | Principal PM | 2026-04-19 |
 | 06 | Evaluation framework | 0.1 | Draft | Principal PM | 2026-04-19 |
@@ -41,6 +41,7 @@ Read top to bottom if this is your first pass. The specs build on each other.
 | 08 | Rollout plan | 0.1 | Draft | Principal PM | 2026-04-19 |
 | 09 | Access & audit | 0.1 | Draft | Principal PM | 2026-04-19 |
 | 10 | Glossary | 0.1 | Draft | Principal PM | 2026-04-19 |
+| 11 | AI product surface | 0.1 | Draft | Principal PM | 2026-04-19 |
 
 **Status ladder:** `Pending → Draft → In Review → Accepted → Superseded`
 
@@ -85,6 +86,7 @@ The contested calls we made during design. Each row is an Architecture Decision 
 | D09 | No time partitioning in sandbox; clustering only; partitioning flag-gated (`BQ_PARTITION=1`) for billed projects | Accepted | 2026-04-18 | Sandbox's 60-day partition expiration silently evicts historical rows on load (77% loss observed). Clustering has no expiration side-effect | Partition by MONTH in sandbox (silently drops data), partition by DAY (same issue), no clustering either | 04 |
 | D10 | Spike-drop detection via explicit rule (`M₁ share ≥ 70%` AND `contract_age ≥ 90 days`) | Proposed | 2026-04-18 | Interpretable to reps; the archetype is already the business's language | Unsupervised anomaly detection on usage patterns, hand-labeled dataset + classifier | 03 |
 | D11 | Expansion credit is a small `+5%` modifier, not a formula-level feature | Proposed | 2026-04-18 | Rewards the #1 behavior a consumption model should encourage while keeping the multiplier bounded. Flagged for revisit if the CFO argues double-count with higher `U` | No expansion credit (metric-neutral), full commit re-baseline (too disruptive to comp) | 03 |
+| D12 | Ramp protection: blended HealthScore for new contracts, segment-aware days (MM 15/60, ENT 30/120), `contract_age` anchored to oldest active contract on the account | Proposed | 2026-04-19 | Addresses the booking-fairness principle — a rep who just closed a deal cannot be punished for adoption lag they do not control. Blended form avoids a paycheck cliff at `ramp_end`. Anchoring to oldest active contract prevents gaming by orchestrating a 1-day gap at renewal to reset the ramp clock | No grace period (v0.5 default — penalizes every new logo), hard grace then cliff (paycheck instability at day 60/120), expected-ramp curve from historical data (no labels yet), single ramp across segments (under-protects Enterprise), reset `contract_age` on every new contract (gameable) | 03 |
 
 Decisions listed as **Proposed** need VPS + CFO sign-off before the pipeline is wired to comp. Decisions listed as **Accepted** are locked and require a superseding PR to change.
 
