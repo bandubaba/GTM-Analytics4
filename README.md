@@ -24,34 +24,50 @@ Everything — the formula, the parameters, the pipeline, the eval framework, th
 
 ## What you can run
 
-The 13 SQL models execute against **BigQuery** (the warehouse the brief
-calls out). `run.py` exports every model as parquet into
-`pipeline_and_tests/data/` so DQ, evals, and the dashboard read locally
-— no BQ round-trip per dashboard click.
+### Easiest — open the live dashboard
+
+🔗 **[Live dashboard on Streamlit Cloud](https://TBD)** — no install, no auth. All 5 views + offline Ask cARR work in-browser.
+
+### Run the dashboard locally (~30 seconds)
+
+The 13 parquet files under `pipeline_and_tests/data/` are committed as a
+deterministic snapshot of the BQ pipeline, so the dashboard runs cold
+without GCP auth.
 
 ```bash
 git clone https://github.com/bandubaba/GTM-Analytics4.git && cd GTM-Analytics4
 python -m venv .venv && source .venv/bin/activate
-pip install -r pipeline_and_tests/requirements.txt -r dashboard/requirements.txt
+pip install -r dashboard/requirements.txt
+streamlit run dashboard/app.py                   # opens localhost:8501
+```
 
+Optional — turn on the Claude-powered NL query layer:
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+streamlit run dashboard/app.py
+```
+
+The default NL mode is an offline keyword router, so the app runs cold
+without an API key.
+
+### Reproduce the pipeline end-to-end (BQ required)
+
+The 13 SQL models execute against **BigQuery** (the warehouse the brief
+calls out). `run.py` exports every model as parquet into
+`pipeline_and_tests/data/` — the same files committed above.
+
+```bash
+pip install -r pipeline_and_tests/requirements.txt
 gcloud auth application-default login                          # one-time
 python data_generation/generate_data.py                        # 1. seeded CSVs
 GOOGLE_CLOUD_PROJECT=<your-proj> python data_generation/upload_to_bq.py  # 2. load BQ
 GOOGLE_CLOUD_PROJECT=<your-proj> python pipeline_and_tests/run.py        # 3. 13 models → BQ + parquet
 python pipeline_and_tests/dq/run_dq.py                         # 4. 16 DQ checks
 python pipeline_and_tests/evals/run_evals.py                   # 5. 12 T1-T4 evals
-streamlit run dashboard/app.py                                 # 6. localhost:8501
 ```
 
-Want the AI layer live?
-
-```bash
-export ANTHROPIC_API_KEY=sk-ant-...
-streamlit run dashboard/app.py                   # "Ask cARR" now uses Claude + verifier
-```
-
-Default NL mode is offline (keyword router) so the app runs cold without
-an API key.
+Rerun is byte-identical (seeded generator + deterministic SQL, D07).
 
 ---
 

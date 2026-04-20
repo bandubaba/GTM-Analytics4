@@ -1,7 +1,9 @@
 data_generation/output/
 dashboard/node_modules/
 dashboard/.next/
-pipeline_and_tests/data/*.parquet
+# pipeline_and_tests/data/*.parquet is committed — see README "Run locally"
+# The parquet files are a deterministic snapshot of the BQ pipeline so the
+# dashboard can run cold without GCP auth. Reproducible via run.py.
 .venv/
 __pycache__/
 *.pyc
