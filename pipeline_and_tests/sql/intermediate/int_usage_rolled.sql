@@ -9,26 +9,26 @@
 --     - expected_credits_90d  = included_monthly_credits × 3 (spec 03 §2.1)
 --     - utilization_u         = credits_90d / expected_credits_90d
 
+-- Window bounds are precomputed in Python (run.py) and passed as date
+-- params ({window_start}, {m1_end}). This keeps the SQL dialect-neutral:
+-- DuckDB and BigQuery both accept DATE '...' literals the same way, and
+-- we avoid INTERVAL arithmetic which diverges between the two engines.
+
 CREATE OR REPLACE TABLE int_usage_rolled AS
-WITH window_bounds AS (
-    SELECT
-        DATE '{as_of_date}'                                       AS as_of_date,
-        DATE '{as_of_date}' - INTERVAL '{trailing_window_days}' DAY AS window_start
-),
-valid_usage AS (
+WITH valid_usage AS (
     SELECT u.*
-    FROM int_orphan_usage u, window_bounds w
+    FROM int_orphan_usage u
     WHERE u.usage_class = 'valid'
-      AND u.usage_date > w.window_start
-      AND u.usage_date <= w.as_of_date
+      AND u.usage_date >  DATE '{window_start}'
+      AND u.usage_date <= DATE '{as_of_date}'
 ),
 rolled AS (
     SELECT
         v.account_id,
         SUM(v.credits_consumed)                                           AS credits_90d,
         SUM(CASE
-              WHEN v.usage_date > (DATE '{as_of_date}' - INTERVAL '{trailing_window_days}' DAY)
-               AND v.usage_date <= (DATE '{as_of_date}' - INTERVAL '{trailing_window_days}' DAY + INTERVAL 30 DAY)
+              WHEN v.usage_date >  DATE '{window_start}'
+               AND v.usage_date <= DATE '{m1_end}'
               THEN v.credits_consumed ELSE 0
             END)                                                          AS credits_month_1
     FROM valid_usage v

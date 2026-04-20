@@ -289,7 +289,10 @@ def _gen_normal(account_id, contracts_df, logs, counter):
         # Baseline: spread included_monthly_credits over ~22 business days, scaled by utilization.
         per_day_mean = monthly_incl / 22.0 * util_target
         weekend = d.weekday() >= 5
-        skip_prob = 0.35 if weekend else 0.04
+        # Tuned so total daily_usage_logs lands near the brief's ~200K target
+        # without flattening the weekday/weekend contrast that the spike-drop
+        # M1-share calculation relies on.
+        skip_prob = 0.18 if weekend else 0.03
         if random.random() < skip_prob:
             continue
         factor = 0.4 if weekend else 1.0
@@ -306,7 +309,7 @@ def _gen_overage(account_id, contracts_df, logs, counter):
     for d, monthly_incl, _ in days:
         per_day_mean = monthly_incl / 22.0 * util_target
         weekend = d.weekday() >= 5
-        if weekend and random.random() < 0.45:
+        if weekend and random.random() < 0.25:
             continue
         factor = 0.5 if weekend else 1.0
         noise = np.random.uniform(0.85, 1.25)
