@@ -26,7 +26,7 @@ Everything — the formula, the parameters, the pipeline, the eval framework, th
 
 ### Easiest — open the live dashboard
 
-🔗 **[Live dashboard on Streamlit Cloud](https://TBD)** — no install, no auth. All 5 views + offline Ask cARR work in-browser.
+🔗 **[gtm-analytics.streamlit.app](https://gtm-analytics.streamlit.app)** — no install, no auth. All 5 views + Ask cARR work in-browser.
 
 ### Run the dashboard locally (~30 seconds)
 
