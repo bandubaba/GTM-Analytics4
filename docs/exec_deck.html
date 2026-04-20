@@ -224,23 +224,19 @@
     padding: 20px 22px; min-height: 2.2in;
   }
   .objection .q {
-    font-size: 16.5px; font-weight: 700; color: var(--warn);
-    margin-bottom: 10px; line-height: 1.3;
+    font-size: 16.5px; font-weight: 700; color: var(--ink);
+    margin-bottom: 10px; line-height: 1.3; letter-spacing: -0.005em;
   }
   .objection .q::before {
-    content: "Q ";
-    font-family: "SF Mono", Menlo, monospace; font-weight: 600; color: var(--warn); opacity: 0.55;
-    margin-right: 2px;
+    content: "";
   }
   .objection .a {
-    font-size: 14.5px; color: var(--ink); line-height: 1.5;
+    font-size: 14.5px; color: var(--ink-2); line-height: 1.55;
   }
   .objection .a::before {
-    content: "A ";
-    font-family: "SF Mono", Menlo, monospace; font-weight: 600; color: var(--accent); opacity: 0.6;
-    margin-right: 2px;
+    content: "";
   }
-  .objection .a b { color: var(--accent); font-weight: 600; }
+  .objection .a b { color: var(--ink); font-weight: 600; }
 
   /* ============================================================
      Slide 5 — how it was built
@@ -260,11 +256,11 @@
   .pillar li { margin-bottom: 5px; }
   .pillar li code { font-size: 11.5px; background: var(--bg-2); padding: 1px 5px; border-radius: 3px; color: var(--ink); }
   .pillar .caught {
-    margin-top: 10px; padding: 10px 12px; background: #fef2f2;
-    border-left: 3px solid var(--warn); border-radius: 4px;
-    font-size: 12.5px; color: var(--ink); line-height: 1.45;
+    margin-top: 10px; padding: 10px 12px; background: #f8fafc;
+    border-left: 3px solid #94a3b8; border-radius: 4px;
+    font-size: 12.5px; color: var(--ink-2); line-height: 1.5;
   }
-  .pillar .caught b { color: var(--warn); font-weight: 700; }
+  .pillar .caught b { color: var(--ink); font-weight: 700; }
 
   /* ============================================================
      Slide 6 — the ask
@@ -318,51 +314,49 @@
 <body>
 
 <!-- ============================================================================
-     SLIDE 1 — The Problem
+     SLIDE 1 — Context
      ============================================================================ -->
 <section class="slide s1">
   <div class="hdr">
-    <span class="brand">cARR · Executive Proposal</span>
-    <span>The problem</span>
+    <span class="brand">cARR &middot; Executive Proposal</span>
+    <span>Context</span>
   </div>
   <div class="rule-top"></div>
 
   <div class="content">
     <div class="deck-meta" style="margin-top: 0.22in;">
-      <div class="eyebrow">A new GTM North Star for the consumption era</div>
-      <div class="authors">Rajesh Kadam · April 2026</div>
+      <div class="eyebrow">A complement to Committed ARR for the consumption motion</div>
+      <div class="authors">Rajesh Kadam &middot; April 2026</div>
     </div>
 
-    <h1 class="deck-title">We are celebrating bookings<br/>that aren&rsquo;t being consumed.</h1>
+    <h1 class="deck-title">Committed ARR captures the signature.<br/>We now also need a measure of what happens after it.</h1>
 
-    <div class="lede" style="margin-top: 24px; font-size: 22px; font-weight: 400; color: var(--ink-2); max-width: 11in; line-height: 1.5;">
-      Our North Star is <b style="color: var(--ink); font-weight: 700;">Committed ARR at signature</b>. It goes blind after the ink dries &mdash; and in a consumption business, the interesting behavior happens after the ink dries.
+    <div class="lede" style="margin-top: 24px; font-size: 20px; font-weight: 400; color: var(--ink-2); max-width: 11in; line-height: 1.5;">
+      Subscription economics rewarded the close. Consumption economics reward the close <em>and</em> sustained use. The proposal in this deck is to add a bounded, rules-based second read of the book &mdash; not to replace the number the board sees today.
     </div>
 
-    <div class="row" style="margin-top: 26px; flex: 1;">
+    <div class="row" style="margin-top: 28px; flex: 1;">
       <div class="persona col">
-        <div class="role">What the CFO sees today</div>
-        <div class="quote">&ldquo;We reported <span class="num">$93.9M</span> Committed ARR to the board. How much of that is actually being used?&rdquo;</div>
-        <ul>
-          <li><span class="num">$17.2M</span> &mdash; 18% of Committed &mdash; is at-risk, shelfware, or spike-drop on our own data.</li>
-          <li>Reported revenue is decoupling from realized revenue. Audit risk grows every quarter.</li>
-          <li>Consumption models punish this faster than subscription did.</li>
+        <div class="role">Where Committed ARR serves us well</div>
+        <ul style="margin-top: 2px;">
+          <li>Clean signal at the moment of sale: additive, board-recognizable, finance-auditable.</li>
+          <li>Integrates with existing comp plans, forecasting, and revenue recognition.</li>
+          <li>A stable unit of measurement the board and auditors understand without translation.</li>
         </ul>
       </div>
 
       <div class="persona col">
-        <div class="role">What the VP of Sales sees today</div>
-        <div class="quote">&ldquo;My reps hit 120% of quota on accounts that quietly churn nine months later. I can&rsquo;t coach that.&rdquo;</div>
-        <ul>
-          <li>One binary signal at signature, then 18 months of silence. Post-sale behavior never reaches the rep.</li>
-          <li>Shelfware and expansion look identical in the weekly. Both show &ldquo;100% of commit signed.&rdquo;</li>
-          <li>Compensation rewards the signature, not the outcome.</li>
+        <div class="role">Where it under-serves the consumption motion</div>
+        <ul style="margin-top: 2px;">
+          <li>Post-sale adoption is not present in the weekly metric; shelfware, spike-and-drop, and expansion all read identically at signature.</li>
+          <li>Field leaders and RevOps lack a triage signal between review cycles.</li>
+          <li>Rep coaching is limited to pipeline mechanics, not post-signature outcomes.</li>
         </ul>
       </div>
     </div>
 
     <div class="hero-tag" style="margin-top: 22px;">
-      In a consumption business, ARR without a HealthScore is a vanity metric.
+      This proposal layers a consumption-adjusted read on top of Committed ARR &mdash; Committed ARR continues to roll up unchanged.
     </div>
   </div>
 
@@ -377,51 +371,51 @@
      ============================================================================ -->
 <section class="slide s2">
   <div class="hdr">
-    <span class="brand">cARR · Executive Proposal</span>
-    <span>The proposal</span>
+    <span class="brand">cARR &middot; Executive Proposal</span>
+    <span>Proposal</span>
   </div>
   <div class="rule-top"></div>
 
   <div style="margin-top: 0.28in;">
     <div class="eyebrow">Proposal</div>
-    <h1 class="slide-title">One number, still in dollars, that sees past the signature.</h1>
+    <h1 class="slide-title">cARR &mdash; a bounded, rules-based complement to Committed ARR.</h1>
     <p class="subhead">
-      cARR preserves the familiar <b>$</b> anchor and the additivity the CFO relies on, while adjusting for the post-sale reality the VP of Sales can&rsquo;t see today. It is bounded, rule-based, and auditable.
+      A single dollar-denominated figure that preserves additivity and board recognizability, while incorporating trailing-90-day utilization, expansion, shelfware, spike-drop, and new-logo ramp treatment.
     </p>
   </div>
 
   <div class="formula">
     <div class="eq"><span class="var">cARR</span> &nbsp;=&nbsp; <span class="var">Committed_ARR</span> &nbsp;&times;&nbsp; <span class="var">HealthScore</span></div>
-    <div class="note">HealthScore &isin; [0.40, 1.30] &mdash; bounded, interpretable, no ML</div>
+    <div class="note">HealthScore &isin; [0.40, 1.30] &mdash; bounded, interpretable, rules-based</div>
   </div>
 
   <div class="cards">
     <div class="card">
       <div class="tag">Bounded</div>
-      <div class="h">No paycheck whipsaw.</div>
-      <div class="b">HealthScore floor <span class="num">0.40</span>, ceiling <span class="num">1.30</span>. No single account can swing a rep&rsquo;s number more than &minus;60% / +30%.</div>
+      <div class="h">Sensitivity is capped by design.</div>
+      <div class="b">HealthScore floor <span class="num">0.40</span>, ceiling <span class="num">1.30</span>. The impact of any single account on a rep&rsquo;s compensation or forecast is known in advance.</div>
     </div>
     <div class="card">
-      <div class="tag">Readable</div>
-      <div class="h">Reps can read the rule.</div>
-      <div class="b">Rules-based SQL, not a learned model. A rep can trace every dollar of their comp to a specific line of the formula.</div>
+      <div class="tag">Rules-based</div>
+      <div class="h">Transparent and defensible.</div>
+      <div class="b">SQL-expressed rules, not a learned model. Every input is traceable to the spec and defensible in a comp dispute or audit.</div>
     </div>
     <div class="card">
       <div class="tag">Ramp-aware</div>
-      <div class="h">New logos are protected.</div>
-      <div class="b">Segment-aware blend: MM gets <span class="num">15&ndash;60d</span>, ENT gets <span class="num">30&ndash;120d</span> of ramp protection. Adoption lag doesn&rsquo;t punish the rep.</div>
+      <div class="h">New logos are handled explicitly.</div>
+      <div class="b">Segment-aware blending: Mid-Market <span class="num">15&ndash;60d</span>, Enterprise <span class="num">30&ndash;120d</span>. Adoption lag during onboarding does not flow to the field metric.</div>
     </div>
     <div class="card">
-      <div class="tag">Board-safe</div>
-      <div class="h">Committed still reports.</div>
-      <div class="b">cARR <em>sits alongside</em> Committed ARR. Nothing the board sees today disappears. We layer truth onto the existing number.</div>
+      <div class="tag">Additive</div>
+      <div class="h">Committed ARR continues unchanged.</div>
+      <div class="b">cARR sits alongside Committed ARR on the existing rollup. No change to the figure reported to the board, to finance, or to audit.</div>
     </div>
   </div>
 
   <div class="reassurance">
-    <span><b>Auditable</b> &mdash; every line of the formula traces to a written spec</span>
-    <span><b>Additive</b> &mdash; rolls up by rep, region, segment</span>
-    <span><b>Bounded</b> &mdash; paycheck risk is mathematically capped</span>
+    <span><b>Auditable</b> &mdash; every rule cites a written spec section</span>
+    <span><b>Additive</b> &mdash; rolls up by rep, region, segment, and time</span>
+    <span><b>Bounded</b> &mdash; worst-case account-level impact is known pre-deployment</span>
   </div>
 
   <div class="ftr">
@@ -431,45 +425,45 @@
 </section>
 
 <!-- ============================================================================
-     SLIDE 3 — What it reveals
+     SLIDE 3 — Evidence
      ============================================================================ -->
 <section class="slide s3">
   <div class="hdr">
-    <span class="brand">cARR · Executive Proposal</span>
+    <span class="brand">cARR &middot; Executive Proposal</span>
     <span>Evidence</span>
   </div>
   <div class="rule-top"></div>
 
   <div style="margin-top: 0.28in;">
-    <div class="eyebrow">What cARR reveals &mdash; on our own book, as of April 2026</div>
-    <h1 class="slide-title">The 18% of Committed ARR that isn&rsquo;t actually there.</h1>
+    <div class="eyebrow">Evidence from the current book</div>
+    <h1 class="slide-title">cARR on our own data, as of April 2026.</h1>
     <p class="subhead">
-      Running the proposed metric over the current snapshot surfaces the accounts where commit and consumption have silently decoupled. These numbers come from the pipeline, not a slide template.
+      Applied to a representative snapshot of the production book. The figures below are produced by the pipeline, not by the slide &mdash; each is reproducible from the SQL models under <code>pipeline_and_tests/</code>.
     </p>
   </div>
 
   <div class="kpis">
     <div class="kpi">
-      <div class="lbl">Committed ARR</div>
+      <div class="lbl">Committed ARR (reported)</div>
       <div class="v num">$93.9M</div>
     </div>
     <div class="kpi">
-      <div class="lbl">cARR</div>
+      <div class="lbl">cARR (proposed)</div>
       <div class="v num">$76.7M</div>
     </div>
     <div class="kpi hot">
-      <div class="lbl">Delta</div>
+      <div class="lbl">Implied adjustment</div>
       <div class="v num">&minus;$17.2M</div>
     </div>
     <div class="kpi">
-      <div class="lbl">Weighted HealthScore</div>
+      <div class="lbl">Portfolio HealthScore</div>
       <div class="v num">0.816</div>
     </div>
   </div>
 
   <div class="bands">
     <div>
-      <h3>Where the 684 in-metric accounts land</h3>
+      <h3>Distribution across the 684 in-metric accounts</h3>
       <div class="bandbar">
         <div class="bandrow">
           <span class="lbl">Healthy</span>
@@ -500,21 +494,21 @@
     </div>
 
     <div>
-      <h3>Why this matters today</h3>
+      <h3>What these figures indicate</h3>
       <p style="font-size: 14px; color: var(--ink-2); line-height: 1.55; margin: 0;">
-        <b style="color: var(--ink);">114 at-risk accounts</b> are being reported at full Committed ARR on today&rsquo;s board deck. They are the 18% gap.
+        <b style="color: var(--ink);">114 accounts</b> are classified at-risk under the HealthScore rule &mdash; reported at full Committed ARR today, with low trailing-90-day utilization.
       </p>
       <p style="font-size: 14px; color: var(--ink-2); line-height: 1.55; margin: 10px 0 0 0;">
-        <b style="color: var(--ink);">58 ramping accounts</b> would have been unfairly penalized in v0.5 of the formula. Ramp protection (D12) fixes that before a rep ever sees a comp impact.
+        <b style="color: var(--ink);">58 accounts</b> are inside their ramp window. Under v0.5 of the formula they would have taken a HealthScore haircut; D12 ramp blending corrects this before any comp impact.
       </p>
       <p style="font-size: 14px; color: var(--ink-2); line-height: 1.55; margin: 10px 0 0 0;">
-        <b style="color: var(--ink);">343 usage logs</b> ($73K) were excluded as orphans. Without the pipeline&rsquo;s D05 rule, they would inflate the denominator and distort every rep&rsquo;s HealthScore.
+        <b style="color: var(--ink);">343 usage logs</b> (~$73K of credits) are excluded as orphans under the D05 rule. Including them would distort each rep&rsquo;s HealthScore denominator.
       </p>
     </div>
   </div>
 
   <div class="demo-callout">
-    <div class="l">Live dashboard &mdash; rep-level, account-level, and the &ldquo;Ask cARR&rdquo; NL query layer</div>
+    <div class="l">Live dashboard &mdash; rep-level, account-level, and the Ask cARR NL query layer</div>
     <div class="r">gtm-analytics.streamlit.app</div>
   </div>
 
@@ -525,86 +519,86 @@
 </section>
 
 <!-- ============================================================================
-     SLIDE 4 — The questions you are about to ask
+     SLIDE 4 — Considerations pressure-tested
      ============================================================================ -->
 <section class="slide s4">
   <div class="hdr">
-    <span class="brand">cARR · Executive Proposal</span>
-    <span>Anticipated objections</span>
+    <span class="brand">cARR &middot; Executive Proposal</span>
+    <span>Considerations</span>
   </div>
   <div class="rule-top"></div>
 
   <div style="margin-top: 0.28in;">
-    <div class="eyebrow">Anticipated objections</div>
-    <h1 class="slide-title">The four questions you are about to ask.</h1>
+    <div class="eyebrow">Considerations pressure-tested in design</div>
+    <h1 class="slide-title">Four decisions this proposal has to earn.</h1>
     <p class="subhead">
-      Overhauling how a sales engine is measured and paid is a reversible-cost decision only if we anticipate the pushback. Here&rsquo;s the plan for each.
+      Each of these was vetted against the spec and the eval framework before review. The mitigations below are in the pipeline today, not a future roadmap.
     </p>
   </div>
 
   <div class="grid">
     <div class="objection">
-      <div class="q">&ldquo;Will my reps revolt when their comp changes?&rdquo;</div>
+      <div class="q">Field adoption and compensation trust.</div>
       <div class="a">
-        They won&rsquo;t, because comp doesn&rsquo;t change blind. We run <b>shadow comp for one full cycle</b> &mdash; paychecks are computed both ways and reps see both numbers every month. If drift exceeds threshold or any T4 eval fails, we <b>roll back to Committed-based comp automatically</b>. The rule is publishable; a rep can trace every dollar of their comp to a line of the formula.
+        A single-cycle <b>shadow-comp window</b> precedes any change in paid compensation. Both figures appear on the monthly rep statement; comp remains paid on Committed ARR. Automated rollback to Committed-based comp if drift exceeds the agreed threshold or any T4 eval fails. The rule is publishable in full &mdash; each line of the formula is traceable to a spec section.
       </div>
     </div>
 
     <div class="objection">
-      <div class="q">&ldquo;What if the formula is wrong?&rdquo;</div>
+      <div class="q">Formula integrity and accuracy.</div>
       <div class="a">
-        We have <b>12 automated evals across four tiers</b>, from T1 Correctness to <b>T4 Comp safety</b>. T4 is stop-the-line: a single account where <code style="font-size:12.5px;">cARR &gt; Committed</code> blocks a deploy. The SQL pipeline is the system of record, never the LLM. Every parameter cites its section in spec 03.
+        Twelve automated evals across four tiers, from <b>T1 Correctness</b> to <b>T4 Comp safety</b>. T4 is stop-the-line: a single account where <code style="font-size:12.5px;">cARR &gt; Committed</code> halts deployment. The SQL pipeline is the system of record; the AI layer (Ask cARR) is never authoritative and shows its generated SQL alongside every answer.
       </div>
     </div>
 
     <div class="objection">
-      <div class="q">&ldquo;Why not use machine learning here?&rdquo;</div>
+      <div class="q">Rules-based rather than learned.</div>
       <div class="a">
-        No labeled training data yet, and reps cannot challenge a black-box model in a comp dispute. Rules-based is the <b>audit story</b>: every input is defensible. v1.5 layers a learned prioritization <em>on top of</em> the rules &mdash; never underneath. The LLM in &ldquo;Ask cARR&rdquo; is a query interface, not a source of truth.
+        Labeled training data for a HealthScore model is not yet available, and a learned multiplier cannot be challenged line-by-line in a comp dispute or audit. Rules-based keeps the model defensible. A learned prioritization layer is proposed for v1.5 &mdash; <em>on top of</em> the rule-based cARR, not inside it.
       </div>
     </div>
 
     <div class="objection">
-      <div class="q">&ldquo;What about my new logos in their ramp period?&rdquo;</div>
+      <div class="q">New-logo treatment during ramp.</div>
       <div class="a">
-        <b>D12 &mdash; segment-aware ramp blend.</b> A new Enterprise logo inherits a healthy HealthScore (1.00) from day 1, fading linearly to the measured HS over <span class="num">30&ndash;120</span> days. Mid-Market ramps over <span class="num">15&ndash;60</span> days. <b>58 accounts</b> on today&rsquo;s book are inside that window. A rep is never punished for adoption lag they don&rsquo;t control.
+        <b>D12 &mdash; segment-aware ramp blending.</b> A new Enterprise logo carries the healthy baseline (HealthScore 1.00) from day 1, blending linearly to the measured HealthScore over <span class="num">30&ndash;120</span> days. Mid-Market blends over <span class="num">15&ndash;60</span> days. <span class="num">58</span> accounts are currently inside that window. Adoption lag during onboarding does not flow to the field metric.
       </div>
     </div>
   </div>
 
   <div class="ftr">
-    <span>Mitigations map 1:1 to specs 05 (DQ) &middot; 06 (Evals) &middot; 08 (Rollout) &middot; 03 §D12</span>
+    <span>Mitigations map to specs 05 (DQ) &middot; 06 (Evals) &middot; 08 (Rollout) &middot; 03 §D12</span>
     <span class="pg">4 / 6</span>
   </div>
 </section>
 
 <!-- ============================================================================
-     SLIDE 5 — How this was built
+     SLIDE 5 — Methodology
      ============================================================================ -->
 <section class="slide s5">
   <div class="hdr">
-    <span class="brand">cARR · Executive Proposal</span>
+    <span class="brand">cARR &middot; Executive Proposal</span>
     <span>Methodology</span>
   </div>
   <div class="rule-top"></div>
 
   <div style="margin-top: 0.28in;">
     <div class="eyebrow">How this was built</div>
-    <h1 class="slide-title">AI-first, spec-driven. The methodology compounds.</h1>
+    <h1 class="slide-title">Spec-first, with an AI coding assistant in the loop.</h1>
     <p class="subhead">
-      Every artifact in this repo &mdash; specs, SQL, tests, dashboard &mdash; was built in a spec-first loop with an AI coding assistant. The discipline is what makes it defensible, not the speed.
+      Every artifact &mdash; metric, pipeline, tests, dashboard &mdash; was developed against a written specification with explicit decision records. The assistant accelerated drafting; a human signed off on every merge.
     </p>
   </div>
 
   <div class="cols">
     <div class="pillar">
-      <div class="step">01 &middot; Specs first</div>
-      <h4>Write the argument before the code.</h4>
+      <div class="step">01 &middot; Specifications and decision records</div>
+      <h4>The argument before the code.</h4>
       <p>
-        12 markdown specs, 12 ADRs in a decision log, every code file cites the spec section it implements. The panel can open <code>specs/</code> and read the argument <em>before</em> reading a line of SQL.
+        Twelve markdown specifications, twelve architecture decision records (ADRs) in a shared decision log. Every code file cites the spec section it implements, and parameter changes require a spec amendment in the same pull request.
       </p>
       <ul>
-        <li>Spec 03 v0.6 &mdash; the formula + ramp protection</li>
+        <li>Spec 03 v0.6 &mdash; the formula and ramp treatment</li>
         <li>Spec 05 &mdash; data-quality catalog (16 assertions)</li>
         <li>Spec 06 &mdash; eval framework (T1&ndash;T4)</li>
         <li>Spec 11 &mdash; the AI product surface</li>
@@ -612,62 +606,62 @@
     </div>
 
     <div class="pillar">
-      <div class="step">02 &middot; AI drafts, human judges</div>
-      <h4>The AI is fast but not safe alone.</h4>
+      <div class="step">02 &middot; AI-assisted drafting, human judgment</div>
+      <h4>Speed from the assistant, safety from review.</h4>
       <p>
-        ~70% of boilerplate came from the assistant. The subtle bugs came from humans running the code against real sandboxes and reading failing evals.
+        Approximately 70% of boilerplate &mdash; SQL scaffolds, test assertions, schema documentation &mdash; was drafted by the assistant. The material errors were caught by humans running the code against real sandboxes and reading failing evals.
       </p>
       <div class="caught">
-        <b>D09 caught by humans:</b> AI generated MONTH-partitioned BQ tables; the sandbox&rsquo;s 60-day expiration silently evicted 77% of rows. Found on an integration run, not a unit test.
+        <b>D09:</b> An assistant-generated MONTH-partitioned BQ schema interacted with the sandbox&rsquo;s 60-day expiration policy, silently evicting 77% of rows on load. Caught at integration, not unit test.
       </div>
       <div class="caught">
-        <b>D12 caught by humans:</b> v0.5 of the formula penalized every new logo. A new-logo eval failed, which forced the ramp-blend design.
+        <b>D12:</b> Version 0.5 of the formula produced a uniform HealthScore haircut for every new logo. A dedicated new-logo eval failed and forced the ramp-blend redesign.
       </div>
       <p style="margin-top: 10px; font-size: 12.5px; color: var(--ink-3);">
-        Every commit carries a <code style="font-size:11px;">Co-Authored-By: Claude</code> trailer. Full provenance.
+        Commit-level provenance is preserved: every commit carries a <code style="font-size:11px;">Co-Authored-By</code> trailer identifying the assistant and the model.
       </p>
     </div>
 
     <div class="pillar">
-      <div class="step">03 &middot; AI as a product surface</div>
-      <h4>&ldquo;Ask cARR&rdquo; is a productized example.</h4>
+      <div class="step">03 &middot; The AI layer as a product surface</div>
+      <h4>Ask cARR &mdash; a bounded NL query layer.</h4>
       <p>
-        The NL query layer is not a wrapper around an LLM. It is a five-stage pipeline:
+        The natural-language query layer is not a thin wrapper around a model. It is a five-stage pipeline, each stage independently testable:
       </p>
       <ul>
-        <li><b>Retriever</b> &mdash; schema hint from the mart</li>
-        <li><b>Generator</b> &mdash; Claude writes SQL</li>
-        <li><b>Verifier</b> &mdash; local EXPLAIN dry-run before execution</li>
-        <li><b>Narrator</b> &mdash; second Claude pass summarizes rows</li>
-        <li><b>Refusal policy</b> &mdash; PII, forecasting, cross-rep comp all refused</li>
+        <li><b>Retriever</b> &mdash; mart schema hint</li>
+        <li><b>Generator</b> &mdash; Claude produces a SQL candidate</li>
+        <li><b>Verifier</b> &mdash; local EXPLAIN dry-run prior to execution</li>
+        <li><b>Narrator</b> &mdash; second-pass summary of the result set</li>
+        <li><b>Refusal policy</b> &mdash; PII, forecasting, cross-rep comp refused explicitly</li>
       </ul>
       <p style="margin-top: 10px;">
-        The SQL is always shown alongside the answer. The LLM is never the system of record.
+        The generated SQL is shown alongside every answer. The pipeline is the system of record; the model is a query interface.
       </p>
     </div>
   </div>
 
   <div class="ftr">
-    <span>AI-assisted · spec-first · humans in the loop for every merge</span>
+    <span>Spec-driven &middot; AI-assisted &middot; human-reviewed at every merge</span>
     <span class="pg">5 / 6</span>
   </div>
 </section>
 
 <!-- ============================================================================
-     SLIDE 6 — The Ask
+     SLIDE 6 — Recommendation
      ============================================================================ -->
 <section class="slide s6">
   <div class="hdr">
-    <span class="brand">cARR · Executive Proposal</span>
-    <span>The ask</span>
+    <span class="brand">cARR &middot; Executive Proposal</span>
+    <span>Recommendation</span>
   </div>
   <div class="rule-top"></div>
 
   <div style="margin-top: 0.28in;">
-    <div class="eyebrow">Phased rollout &mdash; reversible at every step</div>
-    <h1 class="slide-title">Approve Phase 1 today. Comp change waits for evidence.</h1>
+    <div class="eyebrow">Phased rollout &mdash; reversible at each gate</div>
+    <h1 class="slide-title">A three-phase rollout with explicit gates.</h1>
     <p class="subhead">
-      Each phase has a gate. No phase commits comp liability until the previous phase has produced clean data for a full cycle. Rollback is one decision, not a project.
+      No phase commits additional compensation liability until the previous phase has produced clean data for one full cycle. Rollback at any stage is a single decision, supported by the pipeline.
     </p>
   </div>
 
@@ -677,9 +671,9 @@
       <div class="when" style="margin-top: 8px;">This quarter</div>
       <h4>Publish alongside.</h4>
       <p>
-        cARR joins Committed ARR on the exec dashboard. Read-only. No comp impact. Reps and leaders see both numbers side-by-side for one full cycle.
+        cARR joins Committed ARR on the executive dashboard as a second read of the book. Read-only. No compensation impact. Field leaders and reps see both figures side-by-side for one full review cycle.
       </p>
-      <p style="margin-top: 10px;"><b style="color: var(--good);">Gate to Phase 2:</b> &lt; 3% unexplained drift, all T4 evals green for 90 days.</p>
+      <p style="margin-top: 10px;"><b style="color: var(--good);">Gate to Phase 2:</b> under 3% unexplained drift against Committed, all T4 evals green for 90 days.</p>
     </div>
 
     <div class="phase">
@@ -687,28 +681,28 @@
       <div class="when" style="margin-top: 8px;">Next quarter</div>
       <h4>Shadow comp.</h4>
       <p>
-        Paychecks are computed both ways every month. Reps see both numbers on their comp statement. <em>Comp is still paid on Committed</em>. We learn where the two numbers diverge and why.
+        Compensation is dual-computed monthly. Both figures appear on the rep statement. <em>Comp is still paid on Committed ARR.</em> The objective is to surface divergence between the two and understand its drivers.
       </p>
-      <p style="margin-top: 10px;"><b style="color: var(--good);">Gate to Phase 3:</b> &lt; 2% unexplained paycheck delta, no T4 failure, VPS + CFO sign-off.</p>
+      <p style="margin-top: 10px;"><b style="color: var(--good);">Gate to Phase 3:</b> dual-comp delta within the pre-agreed band, no T4 failure, VPS and CFO sign-off.</p>
     </div>
 
     <div class="phase">
       <div class="n">PHASE 3</div>
       <div class="when" style="margin-top: 8px;">Q+2</div>
-      <h4>Cutover with rollback.</h4>
+      <h4>Cutover with automated rollback.</h4>
       <p>
-        cARR becomes the comp driver. Committed stays on the board. Automatic rollback if drift &gt; 5% or T4 fails &mdash; the pipeline flips back to Committed-based comp without a PR.
+        cARR becomes the driver of variable compensation. Committed ARR continues to report to the board unchanged. Automated rollback to Committed-based comp if drift exceeds 5% or any T4 eval fails &mdash; executed by the pipeline, without a manual migration.
       </p>
-      <p style="margin-top: 10px;"><b style="color: var(--good);">Safety net:</b> one-command revert; no manual data migration.</p>
+      <p style="margin-top: 10px;"><b style="color: var(--good);">Safety net:</b> one-command revert; no data migration required.</p>
     </div>
   </div>
 
   <div class="ask">
-    <h3>The ask &mdash; three decisions today</h3>
+    <h3>Recommendation &mdash; three decisions from this review</h3>
     <ol>
-      <li><b>Approve Phase 1</b> &mdash; publish cARR alongside Committed on the exec dashboard this quarter.</li>
-      <li><b>Name a VPS-delegate and a CFO-delegate</b> to the working group &mdash; one point of contact each.</li>
-      <li><b>Green-light shadow comp for Phase 2</b> &mdash; contingent on Phase 1 gates.</li>
+      <li><b>Approve Phase 1</b> &mdash; publish cARR alongside Committed ARR on the executive dashboard this quarter.</li>
+      <li><b>Name a VPS delegate and a CFO delegate</b> to the working group &mdash; one point of contact each.</li>
+      <li><b>In-principle approval for shadow comp</b> &mdash; contingent on Phase 1 gates being met.</li>
     </ol>
   </div>
 
