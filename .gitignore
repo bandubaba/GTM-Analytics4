@@ -1,0 +1,13 @@
+data_generation/output/
+dashboard/node_modules/
+dashboard/.next/
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.env
+.env.local
+*.log
+.playwright-mcp/
+.claude/
+
