@@ -27,6 +27,16 @@ from lib import data, narrator, ask as ask_mod
 
 st.set_page_config(page_title="cARR — GTM North Star", layout="wide", page_icon="📊")
 
+# Streamlit Cloud secrets → env vars so the existing os.environ.get(...) paths
+# work unchanged in both local (exported env var) and cloud (st.secrets) runs.
+# st.secrets raises if no secrets.toml exists locally; swallow that case.
+try:
+    for _key in ("ANTHROPIC_API_KEY",):
+        if _key not in os.environ and _key in st.secrets:
+            os.environ[_key] = st.secrets[_key]
+except Exception:
+    pass
+
 
 # ---------------------------------------------------------------------------
 # guardrail: did the pipeline run?
