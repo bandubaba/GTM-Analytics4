@@ -27,6 +27,36 @@ from lib import data, narrator, ask as ask_mod
 
 st.set_page_config(page_title="cARR — GTM North Star", layout="wide", page_icon="📊")
 
+# Dashboard-wide table styling. Streamlit renders dataframes through a mix
+# of the Glide canvas grid and HTML fallback depending on context; the
+# selectors below cover both paths. Headers get bolder + a touch larger
+# than body cells so tables read cleanly without touching each call site.
+st.markdown(
+    """
+    <style>
+    /* st.dataframe — Glide grid header cells (role=columnheader) */
+    [data-testid="stDataFrame"] [role="columnheader"] {
+        font-weight: 700 !important;
+        font-size: 0.95rem !important;
+        color: #111827 !important;
+    }
+    /* st.dataframe — HTML fallback + st.table headers */
+    [data-testid="stDataFrame"] thead th,
+    [data-testid="stTable"] thead th {
+        font-weight: 700 !important;
+        font-size: 0.95rem !important;
+        color: #111827 !important;
+    }
+    /* Body cells — slightly smaller to create visual hierarchy */
+    [data-testid="stDataFrame"] tbody td,
+    [data-testid="stTable"] tbody td {
+        font-size: 0.875rem !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 # Streamlit Cloud secrets → env vars so the existing os.environ.get(...) paths
 # work unchanged in both local (exported env var) and cloud (st.secrets) runs.
 # st.secrets raises if no secrets.toml exists locally; swallow that case.
