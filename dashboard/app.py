@@ -227,36 +227,11 @@ def view_executive():
     st.markdown("#### How each archetype flows into the cARR bands")
     st.caption(
         "Rows = what the generator injected. Columns = what the cARR formula "
-        "classified the account as. Toggle the filter below to separate "
-        "**post-ramp** accounts (steady state — this is what the T1 evals "
-        "test) from **pre-ramp** accounts (held at HS = 1.00 by the D12 "
-        "new-logo protection, so their archetype characteristics won't "
-        "surface yet, by design)."
+        "classified the account as. A correctly-tuned formula concentrates "
+        "each archetype in the band you would expect — shelfware in "
+        "at_risk_shelfware, overage in overage, spike_drop in at_risk / spike_drop."
     )
-
-    post_ramp_only = st.checkbox(
-        "Post-ramp accounts only (matches T1 eval gating)",
-        value=True,
-        help="D12 holds HS=1.00 for Enterprise accounts <120 days and Mid-Market <60 days "
-             "from oldest active contract. Pre-ramp accounts are excluded from T1 correctness "
-             "tests for that reason. Uncheck to see the full population."
-    )
-
-    # ramp thresholds from pipeline params
-    from pathlib import Path as _P
-    import sys as _sys
-    _sys.path.insert(0, str(_P(__file__).resolve().parent.parent / "pipeline_and_tests"))
-    import params as pl_params  # noqa: E402
-
-    ent_end = pl_params.RAMP_PARAMS["Enterprise"]["ramp_end"]
-    mm_end = pl_params.RAMP_PARAMS["Mid-Market"]["ramp_end"]
-    post_ramp_mask = (
-        ((arch_df.segment == "Enterprise") & (arch_df.contract_age_days >= ent_end))
-        | ((arch_df.segment == "Mid-Market") & (arch_df.contract_age_days >= mm_end))
-    )
-    view_df = arch_df[post_ramp_mask] if post_ramp_only else arch_df
-
-    cross = pd.crosstab(view_df.archetype, view_df.band)
+    cross = pd.crosstab(arch_df.archetype, arch_df.band)
     cross = cross.reindex(
         [a for a in ["shelfware", "spike_drop", "overage", "normal"] if a in cross.index]
     )
@@ -265,38 +240,6 @@ def view_executive():
     cross = cross[band_order]
     cross["total"] = cross.sum(axis=1)
     st.dataframe(cross, use_container_width=True)
-
-    # Row-wise pass-rate readout — makes T1 thresholds tangible
-    try:
-        readout_rows = []
-        if "shelfware" in cross.index:
-            shelf_total = int(cross.loc["shelfware", "total"])
-            shelf_pass = int(cross.loc["shelfware", "at_risk_shelfware"]) if "at_risk_shelfware" in cross.columns else 0
-            readout_rows.append(("shelfware → at_risk_shelfware", shelf_pass, shelf_total, 0.98))
-        if "overage" in cross.index:
-            ov_total = int(cross.loc["overage", "total"])
-            ov_pass = int(cross.loc["overage", "overage"]) if "overage" in cross.columns else 0
-            readout_rows.append(("overage → overage", ov_pass, ov_total, 0.90))
-        if "spike_drop" in cross.index:
-            sd_total = int(cross.loc["spike_drop", "total"])
-            sd_pass = (
-                (int(cross.loc["spike_drop", "at_risk_shelfware"]) if "at_risk_shelfware" in cross.columns else 0)
-                + (int(cross.loc["spike_drop", "spike_drop"]) if "spike_drop" in cross.columns else 0)
-            )
-            readout_rows.append(("spike_drop → at_risk or spike_drop", sd_pass, sd_total, 0.80))
-        readout = pd.DataFrame(readout_rows, columns=["archetype → target band", "passing", "total", "T1 threshold"])
-        readout["observed"] = readout["passing"] / readout["total"].replace({0: 1})
-        readout["status"] = readout.apply(
-            lambda r: "PASS" if r.observed >= r["T1 threshold"] else "FAIL", axis=1
-        )
-        st.dataframe(
-            readout[["archetype → target band", "passing", "total", "observed", "T1 threshold", "status"]]
-                .style.format({"observed": "{:.1%}", "T1 threshold": "{:.0%}"}),
-            use_container_width=True,
-            hide_index=True,
-        )
-    except Exception:
-        pass
 
     st.markdown("### Band distribution — the cARR formula's output")
     band_counts = df.groupby("band").agg(
