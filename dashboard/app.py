@@ -150,80 +150,6 @@ def view_executive():
     c3.metric("cARR / Committed", f"{dq.weighted_healthscore:.1%}", f"{delta_pct:+.1%}")
     c4.metric("Accounts in metric", int(dq.n_accounts_in_metric))
 
-    st.markdown("### cARR by region × segment")
-    fig = px.bar(
-        region,
-        x="region", y="carr", color="segment",
-        barmode="group",
-        labels={"carr": "cARR ($)", "region": ""},
-        hover_data=["committed_arr", "weighted_healthscore", "n_accounts"],
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-    # ------------------------------------------------------------------
-    # Edge cases from the assignment — 5 rows, in the order the assignment
-    # lists them, with actuals verified against `_account_archetypes.csv`
-    # and the int_orphan_usage / int_account_active_contracts marts.
-    # ------------------------------------------------------------------
-    st.markdown("### Edge cases injected per the assignment")
-    st.caption(
-        "The assignment names five anomalies the metric must handle. Here is "
-        "what our generator actually injected, verified against "
-        "`_account_archetypes.csv`, `int_account_active_contracts`, and "
-        "`int_orphan_usage`."
-    )
-
-    arch_all = data.load_archetypes()
-    gen_total = len(arch_all) if len(arch_all) else len(df)
-    g = arch_all.archetype.value_counts() if len(arch_all) else pd.Series(dtype=int)
-
-    # Mid-year expansions — accounts with ≥ 2 active contracts on as_of_date
-    try:
-        act = pd.read_parquet(data.DATA_DIR / "int_account_active_contracts.parquet")
-        n_expansion = int((act.n_active_contracts >= 2).sum())
-    except Exception:
-        n_expansion = int((df.n_active_contracts >= 2).sum())
-
-    # Orphan logs
-    try:
-        orph = pd.read_parquet(data.DATA_DIR / "int_orphan_usage.parquet")
-        n_bad_account = int((orph.usage_class == "orphan_bad_account").sum())
-        n_oow = int((orph.usage_class == "orphan_out_of_window").sum())
-    except Exception:
-        n_bad_account = n_oow = 0
-
-    def _pct(n: int) -> str:
-        return f"{n/gen_total:.1%}" if gen_total else "—"
-
-    edge_table = pd.DataFrame([
-        {
-            "anomaly":           "1. Spike & Drop",
-            "assignment":        "~5% of accounts",
-            "actual":            f"{int(g.get('spike_drop', 0))} / {gen_total} accounts ({_pct(int(g.get('spike_drop', 0)))})",
-        },
-        {
-            "anomaly":           "2. Shelfware",
-            "assignment":        "~10% of accounts",
-            "actual":            f"{int(g.get('shelfware', 0))} / {gen_total} accounts ({_pct(int(g.get('shelfware', 0)))})",
-        },
-        {
-            "anomaly":           "3. Consistent Overages",
-            "assignment":        "~15% of accounts",
-            "actual":            f"{int(g.get('overage', 0))} / {gen_total} accounts ({_pct(int(g.get('overage', 0)))})",
-        },
-        {
-            "anomaly":           "4. Mid-Year Expansions",
-            "assignment":        "several accounts with overlapping contracts",
-            "actual":            f"{n_expansion} accounts with ≥2 active contracts on the snapshot date",
-        },
-        {
-            "anomaly":           "5. Orphaned / Rogue Usage",
-            "assignment":        "a few hundred usage logs",
-            "actual":            f"{n_bad_account + n_oow} logs ({n_bad_account} bad account_id + {n_oow} out-of-window)",
-        },
-    ])
-    st.dataframe(edge_table, use_container_width=True, hide_index=True)
-
     st.markdown("### Band distribution — the cARR formula's output")
     band_counts = df.groupby("band").agg(
         n_accounts=("account_id", "count"),
@@ -298,6 +224,80 @@ via `int_orphan_usage` and never reaches this band classifier —
 that's the right handling per spec 02 §5.
             """
         )
+
+    st.markdown("### cARR by region × segment")
+    fig = px.bar(
+        region,
+        x="region", y="carr", color="segment",
+        barmode="group",
+        labels={"carr": "cARR ($)", "region": ""},
+        hover_data=["committed_arr", "weighted_healthscore", "n_accounts"],
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+    # ------------------------------------------------------------------
+    # Edge cases from the assignment — 5 rows, in the order the assignment
+    # lists them, with actuals verified against `_account_archetypes.csv`
+    # and the int_orphan_usage / int_account_active_contracts marts.
+    # ------------------------------------------------------------------
+    st.markdown("### Edge cases injected per the assignment")
+    st.caption(
+        "The assignment names five anomalies the metric must handle. Here is "
+        "what our generator actually injected, verified against "
+        "`_account_archetypes.csv`, `int_account_active_contracts`, and "
+        "`int_orphan_usage`."
+    )
+
+    arch_all = data.load_archetypes()
+    gen_total = len(arch_all) if len(arch_all) else len(df)
+    g = arch_all.archetype.value_counts() if len(arch_all) else pd.Series(dtype=int)
+
+    # Mid-year expansions — accounts with ≥ 2 active contracts on as_of_date
+    try:
+        act = pd.read_parquet(data.DATA_DIR / "int_account_active_contracts.parquet")
+        n_expansion = int((act.n_active_contracts >= 2).sum())
+    except Exception:
+        n_expansion = int((df.n_active_contracts >= 2).sum())
+
+    # Orphan logs
+    try:
+        orph = pd.read_parquet(data.DATA_DIR / "int_orphan_usage.parquet")
+        n_bad_account = int((orph.usage_class == "orphan_bad_account").sum())
+        n_oow = int((orph.usage_class == "orphan_out_of_window").sum())
+    except Exception:
+        n_bad_account = n_oow = 0
+
+    def _pct(n: int) -> str:
+        return f"{n/gen_total:.1%}" if gen_total else "—"
+
+    edge_table = pd.DataFrame([
+        {
+            "anomaly":           "1. Spike & Drop",
+            "assignment":        "~5% of accounts",
+            "actual":            f"{int(g.get('spike_drop', 0))} / {gen_total} accounts ({_pct(int(g.get('spike_drop', 0)))})",
+        },
+        {
+            "anomaly":           "2. Shelfware",
+            "assignment":        "~10% of accounts",
+            "actual":            f"{int(g.get('shelfware', 0))} / {gen_total} accounts ({_pct(int(g.get('shelfware', 0)))})",
+        },
+        {
+            "anomaly":           "3. Consistent Overages",
+            "assignment":        "~15% of accounts",
+            "actual":            f"{int(g.get('overage', 0))} / {gen_total} accounts ({_pct(int(g.get('overage', 0)))})",
+        },
+        {
+            "anomaly":           "4. Mid-Year Expansions",
+            "assignment":        "several accounts with overlapping contracts",
+            "actual":            f"{n_expansion} accounts with ≥2 active contracts on the snapshot date",
+        },
+        {
+            "anomaly":           "5. Orphaned / Rogue Usage",
+            "assignment":        "a few hundred usage logs",
+            "actual":            f"{n_bad_account + n_oow} logs ({n_bad_account} bad account_id + {n_oow} out-of-window)",
+        },
+    ])
+    st.dataframe(edge_table, use_container_width=True, hide_index=True)
 
 
 # ---------------------------------------------------------------------------
