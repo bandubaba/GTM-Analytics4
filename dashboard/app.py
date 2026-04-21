@@ -69,7 +69,7 @@ st.sidebar.markdown("---")
 
 view = st.sidebar.radio(
     "View",
-    ["Executive", "Reps", "Account drill", "Data quality", "Ask cARR"],
+    ["Executive", "Reps", "Comp impact", "Account drill", "Data quality", "Ask cARR"],
     index=0,
 )
 
@@ -227,6 +227,183 @@ def view_reps():
 
 
 # ---------------------------------------------------------------------------
+# view: comp impact
+# ---------------------------------------------------------------------------
+
+def view_comp_impact():
+    st.title("Comp impact")
+    st.caption(
+        "If we swap the attainment base from **Committed ARR → cARR**, which reps get paid "
+        "more, which get paid less, and where does the money come from? This is the T4 "
+        "comp-safety test in dollar terms (spec 06 §7)."
+    )
+
+    # commission assumption — simple linear rate on attainment, just to show the
+    # magnitude. Reps can tune to match their own plan.
+    rate_pct = st.slider(
+        "Commission rate (applied to attainment $ delta)",
+        min_value=1.0, max_value=25.0, value=10.0, step=0.5,
+        help="A simple linear rate on attainment dollars. Real plans have accelerators "
+             "and SPIFs; this is the baseline sensitivity before those apply."
+    )
+    rate = rate_pct / 100.0
+
+    # ---- portfolio headline --------------------------------------------------
+    total_committed = df.committed_arr.sum()
+    total_carr = df.carr.sum()
+    delta = total_carr - total_committed
+    comp_delta = rate * delta
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Σ Committed ARR", _money(total_committed))
+    c2.metric("Σ cARR", _money(total_carr), f"{delta/total_committed:+.1%}")
+    c3.metric("Attainment $ shift", _money(delta))
+    c4.metric(f"Aggregate comp shift @ {rate_pct:.1f}%", _money(comp_delta))
+
+    st.caption(
+        "Negative aggregate comp shift is expected — cARR discounts shelfware, and "
+        "shelfware is where the biggest dollars sit. The interesting question is "
+        "**not** the total, it's the **distribution across reps**."
+    )
+
+    # ---- where does the money move? ----------------------------------------
+    st.markdown("### Where the attainment $ move — by band")
+    band_flow = df.groupby("band").agg(
+        n_accounts=("account_id", "count"),
+        committed_arr=("committed_arr", "sum"),
+        carr=("carr", "sum"),
+    ).reset_index()
+    band_flow["delta"] = band_flow.carr - band_flow.committed_arr
+    band_flow["comp_delta"] = rate * band_flow["delta"]
+    band_flow = band_flow.sort_values("delta")
+
+    fig_band = px.bar(
+        band_flow,
+        x="band", y="delta",
+        color=band_flow["delta"].apply(lambda v: "lift" if v > 0 else "cut"),
+        color_discrete_map={"lift": "#16a085", "cut": "#c0392b"},
+        labels={"delta": "cARR − Committed ARR ($)", "band": ""},
+    )
+    fig_band.update_layout(showlegend=False)
+    st.plotly_chart(fig_band, use_container_width=True)
+
+    st.dataframe(
+        band_flow.rename(columns={"comp_delta": f"comp_delta_@{rate_pct:.1f}%"})
+            .style.format({
+                "n_accounts": "{:,.0f}",
+                "committed_arr": "${:,.0f}",
+                "carr": "${:,.0f}",
+                "delta": "${:,.0f}",
+                f"comp_delta_@{rate_pct:.1f}%": "${:,.0f}",
+            }),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    # ---- per-rep comp delta -------------------------------------------------
+    st.markdown("### Per-rep comp impact")
+    rep_flow = df.groupby("rep_id").agg(
+        n_accounts=("account_id", "count"),
+        committed_arr=("committed_arr", "sum"),
+        carr=("carr", "sum"),
+    ).reset_index()
+    rep_flow["delta"] = rep_flow.carr - rep_flow.committed_arr
+    rep_flow["delta_pct"] = rep_flow["delta"] / rep_flow.committed_arr
+    rep_flow["comp_delta"] = rate * rep_flow["delta"]
+    rep_flow = rep_flow.merge(reps[["rep_id", "rep_name", "region", "segment"]], on="rep_id", how="left")
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Reps with cut",     int((rep_flow.delta < 0).sum()))
+    c2.metric("Reps roughly flat (±5%)", int(rep_flow.delta_pct.abs().le(0.05).sum()))
+    c3.metric("Reps with lift",    int((rep_flow.delta > 0).sum()))
+
+    st.markdown("#### Ranked — most cut → most lift")
+    cols_shown = ["rep_name", "region", "segment", "n_accounts",
+                  "committed_arr", "carr", "delta", "delta_pct", "comp_delta"]
+    st.dataframe(
+        rep_flow[cols_shown]
+            .sort_values("delta")
+            .rename(columns={"comp_delta": f"comp_Δ_@{rate_pct:.1f}%",
+                             "delta": "attainment_Δ",
+                             "delta_pct": "attainment_Δ_%"})
+            .style.format({
+                "n_accounts": "{:,.0f}",
+                "committed_arr": "${:,.0f}",
+                "carr": "${:,.0f}",
+                "attainment_Δ": "${:,.0f}",
+                "attainment_Δ_%": "{:+.1%}",
+                f"comp_Δ_@{rate_pct:.1f}%": "${:,.0f}",
+            }),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    # distribution — how many reps take big hits?
+    st.markdown("#### Distribution of per-rep comp delta")
+    fig_hist = px.histogram(
+        rep_flow, x="comp_delta", nbins=30,
+        labels={"comp_delta": f"Per-rep comp Δ @ {rate_pct:.1f}% ($)"},
+        color_discrete_sequence=["#34495e"],
+    )
+    fig_hist.add_vline(x=0, line_dash="dash", line_color="#7f8c8d", annotation_text="no change")
+    st.plotly_chart(fig_hist, use_container_width=True)
+
+    # ---- rep × band drill ---------------------------------------------------
+    st.markdown("### Pick a rep → see the dollars by band")
+    rep_pick = st.selectbox(
+        "Rep",
+        rep_flow.sort_values("delta").rep_id.tolist(),
+        format_func=lambda rid: (
+            f"{rep_flow.loc[rep_flow.rep_id == rid, 'rep_name'].iloc[0]}  ·  "
+            f"Δ {rep_flow.loc[rep_flow.rep_id == rid, 'delta'].iloc[0]:+,.0f}  ·  "
+            f"{rep_flow.loc[rep_flow.rep_id == rid, 'delta_pct'].iloc[0]:+.1%}"
+        ),
+    )
+    rep_bands = df[df.rep_id == rep_pick].groupby("band").agg(
+        n=("account_id", "count"),
+        committed_arr=("committed_arr", "sum"),
+        carr=("carr", "sum"),
+    ).reset_index()
+    rep_bands["delta"] = rep_bands.carr - rep_bands.committed_arr
+    rep_bands["comp_delta"] = rate * rep_bands["delta"]
+    rep_bands = rep_bands.sort_values("delta")
+
+    st.dataframe(
+        rep_bands.rename(columns={"comp_delta": f"comp_Δ_@{rate_pct:.1f}%",
+                                  "delta": "attainment_Δ"})
+            .style.format({
+                "n": "{:,.0f}",
+                "committed_arr": "${:,.0f}",
+                "carr": "${:,.0f}",
+                "attainment_Δ": "${:,.0f}",
+                f"comp_Δ_@{rate_pct:.1f}%": "${:,.0f}",
+            }),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    with st.expander("How this maps to the T4 comp-safety eval"):
+        st.markdown(
+            """
+The T4 tier in [spec 06](../specs/06_evaluation_framework.md) asks: *is the metric stable
+and robust enough that tying variable pay to it is fair?* This view makes three of
+those checks tangible:
+
+- **Sensitivity to archetype concentration.** If a single band (shelfware, overage)
+  drives most of a rep's attainment shift, the metric is doing its job —
+  discriminating — not mis-firing. Reps whose books are archetype-balanced should
+  see small deltas.
+- **Tail risk.** The histogram above is the shape comp plans have to absorb. A long
+  left tail is the reason rollout has a **shadow-comp quarter** before any paycheck
+  impact (spec 08).
+- **Single-account sensitivity.** Watch the per-rep drill: if one account drives >30%
+  of a rep's delta, that rep's book is fragile to any one customer. Worth a QBR
+  conversation before cARR goes into comp.
+            """
+        )
+
+
+# ---------------------------------------------------------------------------
 # view: account drill
 # ---------------------------------------------------------------------------
 
@@ -367,6 +544,7 @@ def view_ask():
 routes = {
     "Executive":      view_executive,
     "Reps":           view_reps,
+    "Comp impact":    view_comp_impact,
     "Account drill":  view_account_drill,
     "Data quality":   view_dq,
     "Ask cARR":       view_ask,
