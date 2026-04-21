@@ -1,15 +1,27 @@
 """
 Evaluation harness for cARR.
 
-Four tiers, mirroring specs/06_evaluation_framework.md:
-  T1 Correctness        — each input archetype lands in its expected
-                          HealthScore band
-  T2 Construct validity — bounds honored, cARR = Committed × HS identity
-  T3 Decision utility   — shelfware visibility, rep ranking separation
-  T4 Comp safety        — no unbounded multipliers, orphan exclusion
+Five tiers, mirroring specs/06_evaluation_framework.md:
+  T1 Correctness          — each input archetype lands in its expected
+                            HealthScore band
+  T2 Construct validity   — bounds honored, cARR = Committed × HS identity
+  T3 Decision utility     — shelfware visibility, rep ranking separation
+  T4 Comp safety          — no unbounded multipliers, orphan exclusion
+  T5 Transition fidelity  — does cARR actually surface the five failure
+                            modes the seat→consumption pricing pivot
+                            creates, in dollars the CFO can read?
+
+The T5 framing: SaaS is moving from seat-based to consumption-based
+pricing (AI is the forcing function). A seat-based book reports
+Committed ARR as if every signed dollar is earned. A consumption book
+has five places that assumption fails — shelfware, spike-drop, overage,
+mid-term expansion, and orphaned usage. T5 tests, per failure mode,
+that cARR's dollar answer diverges from seat-based in the expected
+direction and magnitude. A T5 failure means the metric stopped doing
+its business job, not that the code is wrong.
 
 Each check returns (name, tier, passed, detail). A run prints a summary
-and exits non-zero if any T1/T4 check fails (stop-the-line events).
+and exits non-zero if any T1/T4/T5 check fails (stop-the-line events).
 T2/T3 failures are warn-only here (bounds violations are physically
 impossible given the CLAMP in metric_healthscore.sql, but we still
 assert it so the check is audited).
@@ -18,6 +30,12 @@ v0.7: removed the ramp-blend from the HealthScore formula. Consequently
 dropped `_post_ramp_mask`, `check_ramp_monotonicity`, and
 `check_new_logo_protection` — there is no ramp weight any more and the
 steady-state formula applies to every active-contract account.
+
+v0.7.1: added T5 Transition fidelity (5 checks). Each check frames
+one of the five pricing-pivot failure modes as a dollar delta between
+what a seat-based accounting of the same book would report and what
+cARR reports — so the eval output speaks to VPS/CFO, not only to the
+build system.
 
 Usage:
   python evals/run_evals.py
@@ -284,6 +302,125 @@ def check_orphan_exclusion(df: pd.DataFrame) -> Result:
 
 
 # ---------------------------------------------------------------------------
+# T5 — transition fidelity (seat→consumption pricing pivot)
+#
+# The pricing-pivot framing. A seat-based accounting reads every signed
+# dollar as an earned dollar and stops there. Consumption pricing opens
+# five places where that assumption breaks. Each T5 check measures the
+# dollar gap between "what seat-based would have reported" and "what
+# cARR reports" for one failure mode, and asserts the gap is in the
+# expected direction and size. A T5 fail means a failure mode the
+# metric was built to see has become invisible — stop-the-line.
+# ---------------------------------------------------------------------------
+
+# Generator list price for a single consumption credit
+# (`data_generation/config.py::PRICE_PER_CREDIT`). Used only to
+# dollarize the orphan-exclusion exposure in T5e so the CFO sees a
+# dollar, not a credit count.
+_CREDIT_LIST_PRICE_USD = 1.00
+
+
+def check_pivot_shelfware(df: pd.DataFrame) -> Result:
+    """T5a — cARR haircuts shelfware that seat-based would pay at full ACV."""
+    shelf = df[df.archetype == "shelfware"]
+    if len(shelf) == 0:
+        return Result("T5a shelfware: cARR haircut vs seat-based", "T5", False, "no shelfware accounts")
+    seat = shelf.committed_arr.sum()
+    carr = shelf.carr.sum()
+    haircut = (seat - carr) / seat if seat > 0 else 0.0
+    passed = haircut >= 0.45
+    return Result(
+        "T5a shelfware: cARR haircut vs seat-based",
+        "T5",
+        passed,
+        f"{len(shelf)} shelfware accounts  seat=${seat/1e6:.2f}M  cARR=${carr/1e6:.2f}M  "
+        f"Δ=-${(seat-carr)/1e6:.2f}M (-{haircut:.1%}); seat-based would pay full ACV on all of them",
+    )
+
+
+def check_pivot_overage(df: pd.DataFrame) -> Result:
+    """T5b — cARR surfaces consumption upside that seat-based has no price for."""
+    ov = df[df.band == "overage"]
+    if len(ov) == 0:
+        return Result("T5b overage: cARR uplift vs seat-based", "T5", False, "no overage-band accounts")
+    seat = ov.committed_arr.sum()
+    carr = ov.carr.sum()
+    uplift = (carr - seat) / seat if seat > 0 else 0.0
+    passed = uplift >= 0.05
+    return Result(
+        "T5b overage: cARR uplift vs seat-based",
+        "T5",
+        passed,
+        f"{len(ov)} accounts consuming beyond entitlement  seat=${seat/1e6:.2f}M  cARR=${carr/1e6:.2f}M  "
+        f"Δ=+${(carr-seat)/1e6:.2f}M (+{uplift:.1%}); seat-based has no line item for overages",
+    )
+
+
+def check_pivot_spike_drop(df: pd.DataFrame) -> Result:
+    """T5c — cARR catches the cliff; seat-based reports full ACV until contract ends."""
+    sd = df[df.archetype == "spike_drop"]
+    if len(sd) == 0:
+        return Result("T5c spike_drop: cARR cliff vs seat-based", "T5", False, "no spike_drop accounts")
+    caught = sd[sd.band.isin(["spike_drop", "at_risk_shelfware"])]
+    seat = sd.committed_arr.sum()
+    carr = sd.carr.sum()
+    haircut = (seat - carr) / seat if seat > 0 else 0.0
+    catch_rate = len(caught) / len(sd)
+    passed = catch_rate >= 0.80 and haircut >= 0.20
+    return Result(
+        "T5c spike_drop: cARR cliff vs seat-based",
+        "T5",
+        passed,
+        f"{len(caught)}/{len(sd)} ({catch_rate:.0%}) classified as spike_drop/at_risk  "
+        f"seat=${seat/1e6:.2f}M  cARR=${carr/1e6:.2f}M  Δ=-${(seat-carr)/1e6:.2f}M (-{haircut:.1%}); "
+        f"seat-based reports full ACV until the contract expires",
+    )
+
+
+def check_pivot_expansion(df: pd.DataFrame) -> Result:
+    """T5d — cARR compounds overlapping contracts; seat-based prices each line separately."""
+    ex = df[df.band == "expansion"]
+    if len(ex) == 0:
+        return Result("T5d expansion: cARR compounding vs seat-based", "T5", False, "no expansion-band accounts")
+    seat = ex.committed_arr.sum()
+    carr = ex.carr.sum()
+    lift = (carr - seat) / seat if seat > 0 else 0.0
+    passed = lift >= 0.05
+    return Result(
+        "T5d expansion: cARR compounding vs seat-based",
+        "T5",
+        passed,
+        f"{len(ex)} mid-term expansion accounts (≥2 active contracts, U>1.0)  "
+        f"seat=${seat/1e6:.2f}M  cARR=${carr/1e6:.2f}M  Δ=+${(carr-seat)/1e6:.2f}M (+{lift:.1%}); "
+        f"seat-based prices each contract line independently",
+    )
+
+
+def check_pivot_orphans(_df: pd.DataFrame) -> Result:
+    """T5e — cARR excludes rogue usage that seat-based has no entity to attach to."""
+    orphan = pd.read_parquet(DATA_DIR / "int_orphan_usage.parquet")
+    orphan_rows = orphan[orphan.usage_class != "valid"]
+    valid_rows = orphan[orphan.usage_class == "valid"]
+    n_orphan = len(orphan_rows)
+    orphan_credits = orphan_rows.credits_consumed.sum()
+    valid_credits = valid_rows.credits_consumed.sum()
+    dollar_exposure = orphan_credits * _CREDIT_LIST_PRICE_USD
+    # The rolled 90d usage (used by the metric) must be a subset of the
+    # valid class — i.e. no orphan credit has slipped into cARR.
+    rolled = pd.read_parquet(DATA_DIR / "int_usage_rolled.parquet")
+    rolled_total = rolled.credits_90d.sum()
+    excluded_cleanly = rolled_total <= valid_credits + 1e-6
+    passed = n_orphan > 0 and excluded_cleanly
+    return Result(
+        "T5e orphans: cARR exclusion vs seat-based",
+        "T5",
+        passed,
+        f"{n_orphan} rogue usage rows ({orphan_credits:,.0f} credits, ~${dollar_exposure/1e3:.1f}K list) "
+        f"excluded from cARR under D05; seat-based accounting has no entity to attach this usage to",
+    )
+
+
+# ---------------------------------------------------------------------------
 # runner
 # ---------------------------------------------------------------------------
 
@@ -299,6 +436,11 @@ CHECKS = [
     check_rep_dispersion,
     check_no_unbounded_multiplier,
     check_orphan_exclusion,
+    check_pivot_shelfware,
+    check_pivot_overage,
+    check_pivot_spike_drop,
+    check_pivot_expansion,
+    check_pivot_orphans,
 ]
 
 
@@ -313,14 +455,20 @@ def main() -> int:
         print(r.line())
     print()
 
-    t1_t4_fails = [r for r in results if not r.passed and r.tier in ("T1", "T4")]
-    t2_t3_fails = [r for r in results if not r.passed and r.tier in ("T2", "T3")]
+    # T1 (code correct), T4 (comp-safe), T5 (pivot fidelity) are stop-the-line.
+    # T2 (bounds) / T3 (decision utility) warn-only — a T2 fail is physically
+    # impossible under the CLAMP in SQL, a T3 fail is a design call.
+    blocking_fails = [r for r in results if not r.passed and r.tier in ("T1", "T4", "T5")]
+    advisory_fails = [r for r in results if not r.passed and r.tier in ("T2", "T3")]
+    per_tier = {t: sum(1 for r in results if r.tier == t) for t in ("T1", "T2", "T3", "T4", "T5")}
+    tier_breakdown = "  ".join(f"{t}={n}" for t, n in per_tier.items())
+    print(f"[evals] tiers  {tier_breakdown}")
     print(f"[evals] total={len(results)}  pass={sum(1 for r in results if r.passed)}  fail={sum(1 for r in results if not r.passed)}")
-    if t1_t4_fails:
-        print(f"[evals] STOP-THE-LINE: {len(t1_t4_fails)} T1/T4 failures")
+    if blocking_fails:
+        print(f"[evals] STOP-THE-LINE: {len(blocking_fails)} T1/T4/T5 failures")
         return 1
-    if t2_t3_fails:
-        print(f"[evals] warn: {len(t2_t3_fails)} T2/T3 failures (non-blocking)")
+    if advisory_fails:
+        print(f"[evals] warn: {len(advisory_fails)} T2/T3 failures (non-blocking)")
     return 0
 
 

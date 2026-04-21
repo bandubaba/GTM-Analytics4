@@ -178,42 +178,50 @@
      ============================================================ */
   .s3 .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 4px; }
   .kpi {
-    padding: 18px 20px; border-radius: 10px; border: 1px solid var(--rule);
+    padding: 16px 18px; border-radius: 10px; border: 1px solid var(--rule);
     background: var(--bg-2);
   }
-  .kpi .lbl { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase;
-              color: var(--ink-3); font-weight: 600; margin-bottom: 8px; }
-  .kpi .v   { font-size: 32px; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); }
+  .kpi .lbl { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+              color: var(--ink-3); font-weight: 600; margin-bottom: 6px; }
+  .kpi .v   { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); }
   .kpi.hot  { background: #fff7ed; border-color: #fed7aa; }
   .kpi.hot .v { color: var(--hot); }
 
-  .s3 .bands {
-    margin-top: 22px; display: grid; grid-template-columns: 2.1fr 1fr; gap: 28px; align-items: start;
+  /* Per-failure-mode evidence table — the T5 story visualized */
+  .s3 .modes {
+    margin-top: 16px; width: 100%; border-collapse: collapse;
+    font-size: 13px;
   }
-  .s3 .bands h3 { margin: 0 0 12px 0; font-size: 16px; font-weight: 600; color: var(--ink); letter-spacing: -0.005em; }
-  .bandbar { display: flex; flex-direction: column; gap: 8px; }
-  .bandrow { display: grid; grid-template-columns: 150px 1fr 80px; align-items: center; gap: 10px; font-size: 14px; }
-  .bandrow .lbl { color: var(--ink-2); font-weight: 500; }
-  .bandrow .bar {
-    height: 14px; background: var(--bg-2); border-radius: 4px; overflow: hidden;
-    border: 1px solid var(--rule);
+  .s3 .modes th {
+    text-align: left; padding: 8px 10px;
+    font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--ink-3); font-weight: 700; border-bottom: 1px solid var(--rule);
   }
-  .bandrow .bar .fill { height: 100%; }
-  .bandrow .n { text-align: right; color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
-  .fill.healthy  { background: #86efac; }
-  .fill.risk     { background: #fca5a5; }
-  .fill.spike    { background: #f87171; }
-  .fill.expand   { background: #fbbf24; }
-  .fill.overage  { background: #93c5fd; }
+  .s3 .modes th.num { text-align: right; }
+  .s3 .modes td {
+    padding: 9px 10px; border-bottom: 1px solid var(--rule);
+    color: var(--ink-2); line-height: 1.4;
+  }
+  .s3 .modes td.mode { color: var(--ink); font-weight: 600; font-size: 14px; }
+  .s3 .modes td.num  { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 500; }
+  .s3 .modes td.delta-down { text-align: right; font-variant-numeric: tabular-nums; color: var(--hot); font-weight: 700; }
+  .s3 .modes td.delta-up   { text-align: right; font-variant-numeric: tabular-nums; color: var(--good); font-weight: 700; }
+  .s3 .modes td.delta-neutral { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-2); font-weight: 600; }
+  .s3 .modes td.story { color: var(--ink-2); font-size: 12.5px; }
+  .s3 .modes tr:last-child td { border-bottom: none; }
+  .s3 .modes tfoot td {
+    font-weight: 700; color: var(--ink); border-top: 2px solid var(--ink);
+    border-bottom: none; padding-top: 10px;
+  }
 
   .demo-callout {
-    margin-top: 22px;
+    margin-top: 16px;
     display: flex; justify-content: space-between; align-items: center;
-    padding: 16px 22px; border-radius: 10px;
+    padding: 12px 20px; border-radius: 10px;
     background: var(--accent); color: white;
   }
-  .demo-callout .l { font-size: 16px; font-weight: 500; }
-  .demo-callout .r { font-family: "SF Mono", Menlo, monospace; font-size: 15px; font-weight: 600; }
+  .demo-callout .l { font-size: 14px; font-weight: 500; }
+  .demo-callout .r { font-family: "SF Mono", Menlo, monospace; font-size: 14px; font-weight: 600; }
 
   /* ============================================================
      Slide 4 — objections
@@ -314,7 +322,7 @@
 <body>
 
 <!-- ============================================================================
-     SLIDE 1 — Context
+     SLIDE 1 — Context: the pricing pivot
      ============================================================================ -->
 <section class="slide s1">
   <div class="hdr">
@@ -325,38 +333,40 @@
 
   <div class="content">
     <div class="deck-meta" style="margin-top: 0.22in;">
-      <div class="eyebrow">A complement to Committed ARR for the consumption motion</div>
+      <div class="eyebrow">The GTM instrument for the seat &rarr; consumption pivot</div>
       <div class="authors">Rajesh Kadam &middot; April 2026</div>
     </div>
 
-    <h1 class="deck-title">Committed ARR captures the signature.<br/>We now also need a measure of what happens after it.</h1>
+    <h1 class="deck-title">SaaS pricing is moving from seats to consumption.<br/>Our measurement system has to move with it.</h1>
 
     <div class="lede" style="margin-top: 24px; font-size: 20px; font-weight: 400; color: var(--ink-2); max-width: 11in; line-height: 1.5;">
-      Subscription economics rewarded the close. Consumption economics reward the close <em>and</em> sustained use. The proposal in this deck is to add a bounded, rules-based second read of the book &mdash; not to replace the number the board sees today.
+      AI is the forcing function &mdash; per-token cost structure makes per-seat licensing a mismatch, and the rest of the category is repricing on consumption this year. Committed ARR was built for the seat era; in the consumption era it is silent on five specific places the signed dollar does not equal the earned dollar.
     </div>
 
     <div class="row" style="margin-top: 28px; flex: 1;">
       <div class="persona col">
-        <div class="role">Where Committed ARR serves us well</div>
+        <div class="role">The pivot, in one line</div>
         <ul style="margin-top: 2px;">
-          <li>Clean signal at the moment of sale: additive, board-recognizable, finance-auditable.</li>
-          <li>Integrates with existing comp plans, forecasting, and revenue recognition.</li>
-          <li>A stable unit of measurement the board and auditors understand without translation.</li>
+          <li><b>Seat era:</b> price is a function of licenses; the close <em>is</em> the outcome.</li>
+          <li><b>Consumption era:</b> price is a function of usage; the close is the <em>start</em> of the outcome.</li>
+          <li>The measurement system a seat-based book relies on (<span class="num">Committed ARR</span>) reads every signed dollar as earned. That is a workable approximation under seat pricing. It is not under consumption.</li>
         </ul>
       </div>
 
       <div class="persona col">
-        <div class="role">Where it under-serves the consumption motion</div>
+        <div class="role">Five places the assumption breaks &mdash; and Committed ARR is silent</div>
         <ul style="margin-top: 2px;">
-          <li>Post-sale adoption is not present in the weekly metric; shelfware, spike-and-drop, and expansion all read identically at signature.</li>
-          <li>Field leaders and RevOps lack a triage signal between review cycles.</li>
-          <li>Rep coaching is limited to pipeline mechanics, not post-signature outcomes.</li>
+          <li><b>Shelfware</b> &mdash; signed, not consuming. Seat-based books full ACV.</li>
+          <li><b>Spike-drop</b> &mdash; heavy early use, then the cliff. Still books full ACV until expiry.</li>
+          <li><b>Overage</b> &mdash; consuming beyond entitlement. Seat-based has no line item for this.</li>
+          <li><b>Mid-term expansion</b> &mdash; second contract compounds. Priced line-by-line, compounding invisible.</li>
+          <li><b>Orphaned usage</b> &mdash; rogue consumption with no contract match. No hook in seat-based accounting.</li>
         </ul>
       </div>
     </div>
 
     <div class="hero-tag" style="margin-top: 22px;">
-      This proposal layers a consumption-adjusted read on top of Committed ARR &mdash; Committed ARR continues to roll up unchanged.
+      cARR is a bounded, rules-based read that makes all five failure modes visible in dollars &mdash; without changing what the board sees or how Committed ARR rolls up.
     </div>
   </div>
 
@@ -378,37 +388,37 @@
 
   <div style="margin-top: 0.28in;">
     <div class="eyebrow">Proposal</div>
-    <h1 class="slide-title">cARR &mdash; a bounded, rules-based complement to Committed ARR.</h1>
+    <h1 class="slide-title">cARR &mdash; the instrument built to see the five failure modes the pivot creates.</h1>
     <p class="subhead">
-      A single dollar-denominated figure that preserves additivity and board recognizability, while incorporating trailing-90-day utilization, expansion, shelfware, spike-drop, and a new-logo fairness rule.
+      A single dollar-denominated figure that preserves Committed ARR's rollup and auditability, and applies a bounded, rules-based <span class="num">HealthScore</span> that reflects the five consumption-era failure modes &mdash; in a form a rep can read and a CFO can defend.
     </p>
   </div>
 
   <div class="formula">
     <div class="eq"><span class="var">cARR</span> &nbsp;=&nbsp; <span class="var">Committed_ARR</span> &nbsp;&times;&nbsp; <span class="var">HealthScore</span></div>
-    <div class="note">HealthScore &isin; [0.40, 1.30] &mdash; bounded, interpretable, rules-based</div>
+    <div class="note">HealthScore &isin; [0.40, 1.30] &mdash; bounded, interpretable, rules-based &mdash; spec 03 v0.7.1</div>
   </div>
 
   <div class="cards">
     <div class="card">
       <div class="tag">Bounded</div>
-      <div class="h">Sensitivity is capped by design.</div>
-      <div class="b">HealthScore floor <span class="num">0.40</span>, ceiling <span class="num">1.30</span>. The impact of any single account on a rep&rsquo;s compensation or forecast is known in advance.</div>
+      <div class="h">Worst case is known before the pivot.</div>
+      <div class="b">HealthScore floor <span class="num">0.40</span>, ceiling <span class="num">1.30</span>. No single account &mdash; shelfware or explosive &mdash; can move a rep's attainment by more than the cap, a property a seat-based comp plan takes for granted and a naive consumption score does not.</div>
     </div>
     <div class="card">
       <div class="tag">Rules-based</div>
-      <div class="h">Transparent and defensible.</div>
-      <div class="b">SQL-expressed rules, not a learned model. Every input is traceable to the spec and defensible in a comp dispute or audit.</div>
+      <div class="h">Publishable during a pricing pivot.</div>
+      <div class="b">SQL rules, not a learned model. A rep in a comp dispute can read the line that moved her HealthScore. A learned score during a pricing pivot is a double black box: pricing changed, comp changed, and neither is explainable.</div>
     </div>
     <div class="card">
       <div class="tag">Fair to new logos</div>
       <div class="h">No adoption signal, no penalty.</div>
-      <div class="b">Accounts with no usage posted yet default to <span class="num">HealthScore&nbsp;=&nbsp;1.00</span> &mdash; full booking credit during the pre-signal window. A single-line rule, not a tuned ramp curve.</div>
+      <div class="b">Accounts with no usage posted yet default to <span class="num">HealthScore&nbsp;=&nbsp;1.00</span> &mdash; full booking credit during the pre-signal window. A single-line rule (D12b), not a four-parameter ramp curve to fight over every comp cycle.</div>
     </div>
     <div class="card">
       <div class="tag">Additive</div>
-      <div class="h">Committed ARR continues unchanged.</div>
-      <div class="b">cARR sits alongside Committed ARR on the existing rollup. No change to the figure reported to the board, to finance, or to audit.</div>
+      <div class="h">The seat-era rollup survives.</div>
+      <div class="b">cARR sits alongside Committed ARR on the existing rollup. Committed ARR continues to report to the board unchanged &mdash; we are not asking finance or audit to migrate off their anchor during the pivot.</div>
     </div>
   </div>
 
@@ -425,7 +435,7 @@
 </section>
 
 <!-- ============================================================================
-     SLIDE 3 — Evidence
+     SLIDE 3 — Evidence: what the pivot hides and cARR surfaces, in dollars
      ============================================================================ -->
 <section class="slide s3">
   <div class="hdr">
@@ -435,24 +445,24 @@
   <div class="rule-top"></div>
 
   <div style="margin-top: 0.28in;">
-    <div class="eyebrow">Evidence from the current book</div>
-    <h1 class="slide-title">cARR on our own data, as of April 2026.</h1>
+    <div class="eyebrow">What seat-based misses &mdash; in dollars from our own book</div>
+    <h1 class="slide-title">cARR, edge case by edge case, on the 1,000-account snapshot.</h1>
     <p class="subhead">
-      Applied to a representative snapshot of the production book. The figures below are produced by the pipeline, not by the slide &mdash; each is reproducible from the SQL models under <code>pipeline_and_tests/</code>.
+      Each row is one of the five failure modes the pricing pivot creates. <span class="num">Seat read</span> is what a seat-based accounting would report (full <span class="num">Committed_ARR</span> on the affected accounts). <span class="num">cARR read</span> is what the pipeline produces today. All values reproducible from the T5 eval suite.
     </p>
   </div>
 
   <div class="kpis">
     <div class="kpi">
-      <div class="lbl">Committed ARR (reported)</div>
+      <div class="lbl">Committed ARR (seat-based)</div>
       <div class="v num">$133.2M</div>
     </div>
     <div class="kpi">
-      <div class="lbl">cARR (proposed)</div>
+      <div class="lbl">cARR (consumption-fidelity)</div>
       <div class="v num">$116.6M</div>
     </div>
     <div class="kpi hot">
-      <div class="lbl">Implied adjustment</div>
+      <div class="lbl">Net adjustment surfaced</div>
       <div class="v num">&minus;$16.6M</div>
     </div>
     <div class="kpi">
@@ -461,59 +471,68 @@
     </div>
   </div>
 
-  <div class="bands">
-    <div>
-      <h3>Distribution across the 1,000 in-metric accounts</h3>
-      <div class="bandbar">
-        <div class="bandrow">
-          <span class="lbl">Healthy</span>
-          <span class="bar"><span class="fill healthy" style="width: 61.9%"></span></span>
-          <span class="n">619</span>
-        </div>
-        <div class="bandrow">
-          <span class="lbl">At-risk / shelfware</span>
-          <span class="bar"><span class="fill risk" style="width: 19.1%"></span></span>
-          <span class="n">191</span>
-        </div>
-        <div class="bandrow">
-          <span class="lbl">Overage</span>
-          <span class="bar"><span class="fill overage" style="width: 17.8%"></span></span>
-          <span class="n">178</span>
-        </div>
-        <div class="bandrow">
-          <span class="lbl">Spike-drop</span>
-          <span class="bar"><span class="fill spike" style="width: 0.6%"></span></span>
-          <span class="n">6</span>
-        </div>
-        <div class="bandrow">
-          <span class="lbl">Expansion</span>
-          <span class="bar"><span class="fill expand" style="width: 0.6%"></span></span>
-          <span class="n">6</span>
-        </div>
-      </div>
-    </div>
-
-    <div>
-      <h3>What these figures indicate</h3>
-      <p style="font-size: 14px; color: var(--ink-2); line-height: 1.55; margin: 0;">
-        <b style="color: var(--ink);">191 accounts</b> are classified at-risk under the HealthScore rule &mdash; reported at full Committed ARR today, with low trailing-90-day utilization.
-      </p>
-      <p style="font-size: 14px; color: var(--ink-2); line-height: 1.55; margin: 10px 0 0 0;">
-        <b style="color: var(--ink);">178 accounts</b> are consuming above contracted entitlement (trailing-90d <code style="font-size:12.5px;">U&nbsp;&gt;&nbsp;1.10</code>) &mdash; expansion revenue the current Committed ARR figure is silent about, capped at <span class="num">1.30&times;</span> by design.
-      </p>
-      <p style="font-size: 14px; color: var(--ink-2); line-height: 1.55; margin: 10px 0 0 0;">
-        <b style="color: var(--ink);">350 usage logs</b> (~$73K of credits) are excluded as orphans under the D05 rule. Including them would distort each rep&rsquo;s HealthScore denominator.
-      </p>
-    </div>
-  </div>
+  <table class="modes">
+    <thead>
+      <tr>
+        <th style="width: 1.4in;">Failure mode</th>
+        <th class="num" style="width: 0.55in;">Accts</th>
+        <th class="num" style="width: 0.85in;">Seat read</th>
+        <th class="num" style="width: 0.85in;">cARR read</th>
+        <th class="num" style="width: 0.95in;">&Delta; (dollars / %)</th>
+        <th>What seat-based was missing</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="mode">Shelfware</td>
+        <td class="num">100</td>
+        <td class="num">$14.1M</td>
+        <td class="num">$5.6M</td>
+        <td class="delta-down">&minus;$8.5M &nbsp;&minus;60%</td>
+        <td class="story">Signed, not consuming. Seat-based pays full ACV until expiry; cARR floors HealthScore at <span class="num">0.40</span>.</td>
+      </tr>
+      <tr>
+        <td class="mode">Spike-drop</td>
+        <td class="num">50</td>
+        <td class="num">$5.5M</td>
+        <td class="num">$2.3M</td>
+        <td class="delta-down">&minus;$3.2M &nbsp;&minus;58%</td>
+        <td class="story">Heavy early use, then the cliff. The seat read is flat until the contract ends; cARR sees the cliff the quarter it happens.</td>
+      </tr>
+      <tr>
+        <td class="mode">Overage</td>
+        <td class="num">178</td>
+        <td class="num">$23.1M</td>
+        <td class="num">$27.1M</td>
+        <td class="delta-up">+$4.0M &nbsp;+17%</td>
+        <td class="story">Consuming beyond entitlement. A seat-based book has no line item for this; cARR books the upside, capped at <span class="num">1.30&times;</span>.</td>
+      </tr>
+      <tr>
+        <td class="mode">Mid-term expansion</td>
+        <td class="num">6</td>
+        <td class="num">$1.7M</td>
+        <td class="num">$1.9M</td>
+        <td class="delta-up">+$0.3M &nbsp;+16%</td>
+        <td class="story">Second contract compounds. Seat-based prices each line independently; cARR applies the <span class="num">EXPANSION_MODIFIER</span> once the second contract is active and U&nbsp;&gt;&nbsp;1.0.</td>
+      </tr>
+      <tr>
+        <td class="mode">Orphan usage</td>
+        <td class="num">350 rows</td>
+        <td class="num">&mdash;</td>
+        <td class="num">&mdash;</td>
+        <td class="delta-neutral">72.7K credits</td>
+        <td class="story">Rogue consumption with no contract match. No hook in seat-based; D05 excludes cleanly so no rep is paid against broken data.</td>
+      </tr>
+    </tbody>
+  </table>
 
   <div class="demo-callout">
-    <div class="l">Live dashboard &mdash; rep-level, account-level, and the Ask cARR NL query layer</div>
-    <div class="r">gtm-analytics.streamlit.app</div>
+    <div class="l">Rows reproducible from the T5 eval &mdash; every &Delta; is an asserted threshold, not a one-off read</div>
+    <div class="r">python pipeline_and_tests/evals/run_evals.py</div>
   </div>
 
   <div class="ftr">
-    <span>Source: pipeline_and_tests/data &mdash; snapshot 2026-04-21 (v0.7.1)</span>
+    <span>Source: pipeline_and_tests/data &mdash; snapshot 2026-04-21 (v0.7.1) &middot; T5 suite</span>
     <span class="pg">3 / 6</span>
   </div>
 </section>
@@ -529,45 +548,45 @@
   <div class="rule-top"></div>
 
   <div style="margin-top: 0.28in;">
-    <div class="eyebrow">Considerations pressure-tested in design</div>
-    <h1 class="slide-title">Four decisions this proposal has to earn.</h1>
+    <div class="eyebrow">Considerations specific to a pricing pivot</div>
+    <h1 class="slide-title">Four decisions a measurement change during a pricing pivot has to earn.</h1>
     <p class="subhead">
-      Each of these was vetted against the spec and the eval framework before review. The mitigations below are in the pipeline today, not a future roadmap.
+      The risk during a pivot is not the math &mdash; it is that pricing and comp change at once, and the field loses trust. Each of these was vetted against the spec and the eval framework before review; the mitigations are in the pipeline today, not on a roadmap.
     </p>
   </div>
 
   <div class="grid">
     <div class="objection">
-      <div class="q">Field adoption and compensation trust.</div>
+      <div class="q">Field trust when pricing <em>and</em> comp are both moving.</div>
       <div class="a">
-        A single-cycle <b>shadow-comp window</b> precedes any change in paid compensation. Both figures appear on the monthly rep statement; comp remains paid on Committed ARR. Automated rollback to Committed-based comp if drift exceeds the agreed threshold or any T4 eval fails. The rule is publishable in full &mdash; each line of the formula is traceable to a spec section.
+        A single-cycle <b>shadow-comp window</b> precedes any change in paid compensation. Both figures appear on the monthly rep statement; comp remains paid on Committed ARR. Automated rollback to Committed-based comp if drift exceeds the agreed threshold or any T4/T5 eval fails. Because the rule is SQL &mdash; not a learned model &mdash; a rep in a dispute can read the exact line that moved her HealthScore.
       </div>
     </div>
 
     <div class="objection">
-      <div class="q">Formula integrity and accuracy.</div>
+      <div class="q">Why bounded rules, not a learned score, during the pivot.</div>
       <div class="a">
-        Eleven automated evals across four tiers, from <b>T1 Correctness</b> to <b>T4 Comp safety</b>. T4 is stop-the-line: a single account where <code style="font-size:12.5px;">cARR &gt; Committed</code> halts deployment. The SQL pipeline is the system of record; the AI layer (Ask cARR) is never authoritative and shows its generated SQL alongside every answer.
+        During a pricing pivot a <em>learned</em> HealthScore is a double black box: the pricing changed, the comp driver changed, and the weights are not defensible line-by-line. Bounded rules keep the metric publishable, auditable, and reversible in one PR. A learned prioritization layer is proposed for v1.5 &mdash; <em>on top of</em> rule-based cARR, not inside it &mdash; once labeled outcomes from shadow comp are available.
       </div>
     </div>
 
     <div class="objection">
-      <div class="q">Rules-based rather than learned.</div>
+      <div class="q">Proof the metric still sees the pivot's failure modes.</div>
       <div class="a">
-        Labeled training data for a HealthScore model is not yet available, and a learned multiplier cannot be challenged line-by-line in a comp dispute or audit. Rules-based keeps the model defensible. A learned prioritization layer is proposed for v1.5 &mdash; <em>on top of</em> the rule-based cARR, not inside it.
+        Sixteen automated evals across <b>five tiers</b> &mdash; including the new <b>T5 Transition fidelity</b> tier, which asserts per failure mode (shelfware, spike-drop, overage, expansion, orphans) that cARR's dollar answer diverges from a seat-based read in the expected direction and magnitude. T1, T4, and T5 are stop-the-line: a single regression on a pricing-pivot failure mode halts deployment, no exceptions.
       </div>
     </div>
 
     <div class="objection">
-      <div class="q">New-logo fairness, without a tuning fight.</div>
+      <div class="q">New-logo fairness, without a tuning fight mid-pivot.</div>
       <div class="a">
-        <b>D12b &mdash; pre-signal trust.</b> When an account has no usage posted yet (<code style="font-size:12.5px;">U</code> is undefined), <code style="font-size:12.5px;">HealthScore&nbsp;=&nbsp;1.00</code> by default &mdash; full booking credit during the pre-signal window. A one-line rule with zero tuning parameters, replacing the v0.6 segment-aware ramp blend that would have invited a four-knob review every comp cycle. The gaming guard (<code style="font-size:12.5px;">contract_age</code> anchored to the oldest active contract) survives intact for the spike-drop age gate.
+        <b>D12b &mdash; pre-signal trust.</b> When an account has no usage posted yet (<code style="font-size:12.5px;">U</code> is undefined), <code style="font-size:12.5px;">HealthScore&nbsp;=&nbsp;1.00</code> by default &mdash; full booking credit during the pre-signal window. A one-line rule with zero tuning parameters, replacing the earlier v0.6 four-knob ramp blend that every comp cycle would re-litigate. During a pricing pivot, fewer knobs is the whole point.
       </div>
     </div>
   </div>
 
   <div class="ftr">
-    <span>Mitigations map to specs 05 (DQ) &middot; 06 (Evals) &middot; 08 (Rollout) &middot; 03 §D12b</span>
+    <span>Mitigations map to specs 05 (DQ) &middot; 06 v0.2 (Evals, T5) &middot; 08 (Rollout) &middot; 03 §D12b</span>
     <span class="pg">4 / 6</span>
   </div>
 </section>
@@ -583,10 +602,10 @@
   <div class="rule-top"></div>
 
   <div style="margin-top: 0.28in;">
-    <div class="eyebrow">How this was built</div>
+    <div class="eyebrow">How this was built &mdash; for a pricing pivot</div>
     <h1 class="slide-title">Spec-first, with an AI coding assistant in the loop.</h1>
     <p class="subhead">
-      Every artifact &mdash; metric, pipeline, tests, dashboard &mdash; was developed against a written specification with explicit decision records. The assistant accelerated drafting; a human signed off on every merge.
+      A measurement change during a pricing pivot has to be traceable, reversible, and provably doing the job. Every artifact &mdash; metric, pipeline, tests, dashboard &mdash; was developed against a written specification with explicit decision records. The assistant accelerated drafting; a human signed off on every merge.
     </p>
   </div>
 
@@ -595,12 +614,12 @@
       <div class="step">01 &middot; Specifications and decision records</div>
       <h4>The argument before the code.</h4>
       <p>
-        Twelve markdown specifications, thirteen architecture decision records (ADRs &mdash; including one supersedence, D12&rarr;D12b) in a shared decision log. Every code file cites the spec section it implements, and parameter changes require a spec amendment in the same pull request.
+        Twelve markdown specifications, thirteen architecture decision records (ADRs &mdash; including one supersedence, D12&rarr;D12b) in a shared decision log. Every code file cites the spec section it implements, and parameter changes require a spec amendment in the same pull request &mdash; the discipline a pricing pivot depends on.
       </p>
       <ul>
         <li>Spec 03 v0.7.1 &mdash; the formula, new-logo fairness rule, and 2026-04-21 calibration</li>
         <li>Spec 05 &mdash; data-quality catalog (16 assertions)</li>
-        <li>Spec 06 &mdash; eval framework (T1&ndash;T4)</li>
+        <li>Spec 06 v0.2 &mdash; eval framework, now <b>five tiers</b> including T5 Transition fidelity (16 checks)</li>
         <li>Spec 11 &mdash; the AI product surface</li>
       </ul>
     </div>
@@ -615,7 +634,7 @@
         <b>D09:</b> An assistant-generated MONTH-partitioned BQ schema interacted with the sandbox&rsquo;s 60-day expiration policy, silently evicting 77% of rows on load. Caught at integration, not unit test.
       </div>
       <div class="caught">
-        <b>D12&rarr;D12b:</b> Version 0.5 of the formula produced a uniform HealthScore haircut for every new logo. A dedicated new-logo eval failed. The v0.6 fix added a four-parameter segment-aware ramp blend; v0.7 supersedes it with a single-line pre-signal trust rule &mdash; fewer knobs, same fairness guarantee.
+        <b>D12&rarr;D12b:</b> Version 0.5 of the formula produced a uniform HealthScore haircut for every new logo. A dedicated new-logo eval failed. The v0.6 fix added a four-parameter segment-aware ramp blend; v0.7 supersedes it with a single-line pre-signal trust rule &mdash; fewer knobs, same fairness guarantee, the right direction for a pivot.
       </div>
       <p style="margin-top: 10px; font-size: 12.5px; color: var(--ink-3);">
         Commit-level provenance is preserved: every commit carries a <code style="font-size:11px;">Co-Authored-By</code> trailer identifying the assistant and the model.
@@ -658,10 +677,10 @@
   <div class="rule-top"></div>
 
   <div style="margin-top: 0.28in;">
-    <div class="eyebrow">Phased rollout &mdash; reversible at each gate</div>
+    <div class="eyebrow">Align the measurement system with the pricing system &mdash; in phases</div>
     <h1 class="slide-title">A three-phase rollout with explicit gates.</h1>
     <p class="subhead">
-      No phase commits additional compensation liability until the previous phase has produced clean data for one full cycle. Rollback at any stage is a single decision, supported by the pipeline.
+      No phase commits additional compensation liability until the previous phase has produced clean data for one full cycle. T5 Transition fidelity and T4 Comp safety are stop-the-line gates at every phase. Rollback at any stage is a single decision, supported by the pipeline.
     </p>
   </div>
 
@@ -671,9 +690,9 @@
       <div class="when" style="margin-top: 8px;">This quarter</div>
       <h4>Publish alongside.</h4>
       <p>
-        cARR joins Committed ARR on the executive dashboard as a second read of the book. Read-only. No compensation impact. Field leaders and reps see both figures side-by-side for one full review cycle.
+        cARR joins Committed ARR on the executive dashboard as a second read of the book &mdash; the consumption-era complement to the seat-era anchor. Read-only. No compensation impact. Field leaders and reps see both figures side-by-side for one full review cycle.
       </p>
-      <p style="margin-top: 10px;"><b style="color: var(--good);">Gate to Phase 2:</b> under 3% unexplained drift against Committed, all T4 evals green for 90 days.</p>
+      <p style="margin-top: 10px;"><b style="color: var(--good);">Gate to Phase 2:</b> all T4 and T5 evals green for 90 days; pivot failure modes visibly surfacing.</p>
     </div>
 
     <div class="phase">
@@ -681,9 +700,9 @@
       <div class="when" style="margin-top: 8px;">Next quarter</div>
       <h4>Shadow comp.</h4>
       <p>
-        Compensation is dual-computed monthly. Both figures appear on the rep statement. <em>Comp is still paid on Committed ARR.</em> The objective is to surface divergence between the two and understand its drivers.
+        Compensation is dual-computed monthly. Both figures appear on the rep statement. <em>Comp is still paid on Committed ARR.</em> The objective is to surface the divergence on specific accounts and have reps learn to read the five pivot failure modes before a dollar of comp moves.
       </p>
-      <p style="margin-top: 10px;"><b style="color: var(--good);">Gate to Phase 3:</b> dual-comp delta within the pre-agreed band, no T4 failure, VPS and CFO sign-off.</p>
+      <p style="margin-top: 10px;"><b style="color: var(--good);">Gate to Phase 3:</b> dual-comp delta within the pre-agreed band, no T4/T5 failure, VPS and CFO sign-off.</p>
     </div>
 
     <div class="phase">
@@ -691,7 +710,7 @@
       <div class="when" style="margin-top: 8px;">Q+2</div>
       <h4>Cutover with automated rollback.</h4>
       <p>
-        cARR becomes the driver of variable compensation. Committed ARR continues to report to the board unchanged. Automated rollback to Committed-based comp if drift exceeds 5% or any T4 eval fails &mdash; executed by the pipeline, without a manual migration.
+        cARR becomes the driver of variable compensation &mdash; the measurement system now aligned with the consumption-era pricing system. Committed ARR continues to report to the board unchanged. Automated rollback to Committed-based comp if drift exceeds 5% or any T4/T5 eval fails &mdash; executed by the pipeline, without a manual migration.
       </p>
       <p style="margin-top: 10px;"><b style="color: var(--good);">Safety net:</b> one-command revert; no data migration required.</p>
     </div>
@@ -700,14 +719,14 @@
   <div class="ask">
     <h3>Recommendation &mdash; three decisions from this review</h3>
     <ol>
-      <li><b>Approve Phase 1</b> &mdash; publish cARR alongside Committed ARR on the executive dashboard this quarter.</li>
-      <li><b>Name a VPS delegate and a CFO delegate</b> to the working group &mdash; one point of contact each.</li>
-      <li><b>In-principle approval for shadow comp</b> &mdash; contingent on Phase 1 gates being met.</li>
+      <li><b>Approve Phase 1</b> &mdash; publish cARR alongside Committed ARR this quarter; make the five pivot failure modes visible before the comp plan is touched.</li>
+      <li><b>Name a VPS delegate and a CFO delegate</b> to the working group &mdash; one point of contact each; co-own the T5 threshold review every quarter.</li>
+      <li><b>In-principle approval for shadow comp</b> &mdash; contingent on Phase 1 gates being met; the pricing pivot timeline should not race ahead of the measurement pivot.</li>
     </ol>
   </div>
 
   <div class="ftr">
-    <span>Rollout plan &mdash; spec 08 &middot; Rollback gates &mdash; spec 08 §4</span>
+    <span>Rollout plan &mdash; spec 08 &middot; Rollback gates &mdash; spec 08 §4 &middot; T5 gate &mdash; spec 06 §7b.3</span>
     <span class="pg">6 / 6</span>
   </div>
   <div class="demo-link">gtm-analytics.streamlit.app</div>

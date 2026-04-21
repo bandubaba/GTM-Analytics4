@@ -21,7 +21,9 @@ pipeline_and_tests/
 ├── dq/
 │   └── run_dq.py               16 assertions in two severity tiers (block/warn)
 ├── evals/
-│   └── run_evals.py            11 checks across T1/T2/T3/T4 from spec 06
+│   └── run_evals.py            16 checks across T1/T2/T3/T4/T5 from spec 06 v0.2
+│                               (T5 = transition-fidelity tier for the
+│                               seat→consumption pricing pivot)
 └── data/                       (gitignored) parquet exports of every model
 ```
 
@@ -77,8 +79,22 @@ Expected output on a clean run (v0.7.1 parameters):
   overage              : 178
   healthy              : 619
 [dq]       16 assertions  pass=16  block=0  warn=0
-[evals]    11 checks      pass=11  fail=0
+[evals]    tiers  T1=4  T2=3  T3=2  T4=2  T5=5
+[evals]    16 checks      pass=16  fail=0
 ```
+
+The T5 (transition fidelity) tier, per `specs/06_evaluation_framework.md`
+§7b, is stop-the-line alongside T1 and T4. It asserts — per
+pricing-pivot failure mode — that cARR's dollar answer diverges from a
+seat-based read in the expected direction and magnitude:
+
+| Check | Mode | Seat read | cARR read | Δ |
+|---|---|---:|---:|---:|
+| T5a | shelfware | $14.12M | $5.65M | −$8.47M (−60%) |
+| T5b | overage | $23.14M | $27.11M | +$3.97M (+17%) |
+| T5c | spike-drop | $5.51M | $2.30M | −$3.21M (−58%) |
+| T5d | expansion | $1.68M | $1.94M | +$0.27M (+16%) |
+| T5e | orphans | — | — | 72.7K credits excluded (D05) |
 
 v0.7.1 moved three parameters after an attainment-chart review — see
 [`specs/03_north_star_metric.md#appendix-d`](../specs/03_north_star_metric.md)
@@ -160,8 +176,11 @@ without a separate parameter.
 | **T2 Construct validity** | HS bounds, `HS = clamp(base × modifier, FLOOR, CAP)`, `cARR = Commit × HS` to 6 decimals | The formula as coded disagrees with the spec. P0. |
 | **T3 Decision utility** | shelfware visibly at-risk, rep-level weighted-HS dispersion | The metric is computable but doesn't help decide anything. Design issue. |
 | **T4 Comp safety** | no cARR/Commit > HS_CAP, orphan exclusion | A rep could be paid wrong. P0 for comp. |
+| **T5 Transition fidelity** | shelfware/overage/spike-drop/expansion dollar Δ vs a seat-based read; orphan exclusion dollarized | The metric stopped seeing one of the five pricing-pivot failure modes we built it for. P0. |
 
-T1 and T4 failures exit non-zero (stop-the-line); T2/T3 warn but continue.
+T1, T4, and T5 failures exit non-zero (stop-the-line); T2/T3 warn but continue.
+
+**Why T5 is separate from T1.** T1 asks "did the code compute what spec 03 says?" (a unit-level assertion against HealthScore values). T5 asks "does the metric surface each of the five consumption-era failure modes in dollars the CFO can read?" (a business-level assertion against the seat-vs-cARR delta per mode). A metric can pass every T1 check and still fail T5 if, e.g., a parameter flip neutralizes the spike-drop modifier — T5 catches the business regression that T1 is not scoped to see.
 
 ## What would change in production
 

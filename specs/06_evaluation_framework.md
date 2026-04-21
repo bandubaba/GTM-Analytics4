@@ -6,17 +6,21 @@
 | Audience      | Principal PM, Data Science, VP Sales, CFO, panel reviewers                   |
 | Owner         | Principal PM, GTM Analytics                                                  |
 | Status        | Draft                                                                        |
-| Version       | 0.1                                                                          |
-| Last reviewed | 2026-04-19                                                                   |
+| Version       | 0.2                                                                          |
+| Last reviewed | 2026-04-21                                                                   |
 | Related       | [03 — Metric](03_north_star_metric.md), [05 — Data Quality](05_data_quality.md), [08 — Rollout Plan](08_rollout_plan.md) |
 
 ---
 
 ## 1. Purpose
 
-This spec defines how we know cARR is *working* — not just that it computes, but that it **measures what it claims** and **earns the trust required to drive compensation**. It moves beyond loss-function thinking into a four-tier framework with explicit business-relevant pass criteria and explicit stop-the-line consequences when a tier fails.
+This spec defines how we know cARR is *working* — not just that it computes, but that it **measures what it claims**, **helps decide**, **earns the trust required to drive compensation**, and **does the specific job the seat→consumption pricing pivot requires of it**. It moves beyond loss-function thinking into a five-tier framework with explicit business-relevant pass criteria and explicit stop-the-line consequences when a tier fails.
 
 Data quality (spec 05) answers *"is the data consistent and the pipeline correct?"* This spec answers *"is the metric fit for purpose?"* Both run in CI; their failure modes are different.
+
+### 1.1 The pricing-pivot framing (new in v0.2)
+
+SaaS is migrating from seat-based to consumption-based pricing — AI is the forcing function (per-token cost structure makes per-seat licensing a mismatch). Palo Alto Networks' GTM book is on the same trajectory. A measurement system built for the seat era reads every signed dollar as an earned dollar; a consumption book has five places where that assumption breaks. The new **T5 — Transition fidelity** tier tests, in dollars, that cARR actually surfaces each of those five failure modes. A T5 pass means the metric is doing the job the pricing pivot requires; a T5 fail means a failure mode the metric was built to see has become invisible.
 
 ## 2. Guiding principles
 
@@ -28,7 +32,7 @@ Data quality (spec 05) answers *"is the data consistent and the pipeline correct
 
 ---
 
-## 3. The four-tier framework
+## 3. The five-tier framework
 
 | Tier | Question answered | Consequence if it fails |
 |---|---|---|
@@ -36,8 +40,11 @@ Data quality (spec 05) answers *"is the data consistent and the pipeline correct
 | **T2 — Construct validity** | *Does cARR actually distinguish healthy from unhealthy accounts?* | **Revisit the formula.** If shelfware doesn't floor correctly, the formula needs work. |
 | **T3 — Decision utility** | *Does cARR beat the naive alternatives at the same job?* | **Don't adopt cARR at all.** If it doesn't beat pure ARR at identifying at-risk accounts, status quo wins. |
 | **T4 — Comp safety** | *Is the metric stable and robust enough to pay people against?* | **Don't tie to comp.** Use as a reporting metric only; return to reporting-only phase of the rollout. |
+| **T5 — Transition fidelity** | *Does cARR, in dollars, surface the five failure modes the seat→consumption pricing pivot creates?* | **Don't publish the pivot story.** If cARR can't show the dollar delta between a seat-based read and itself on shelfware / overage / spike-drop / expansion / orphans, it isn't doing the job we built it for. |
 
-Notice the escalating scope: T1 is about the code, T2 about the formula, T3 about the *choice* of metric, T4 about using it for comp. Each tier gates a broader decision.
+Notice the escalating scope: T1 is about the code, T2 about the formula, T3 about the *choice* of metric, T4 about using it for comp, T5 about using it to *tell the pricing-transition story*. Each tier gates a broader decision.
+
+T1, T4, and T5 are stop-the-line. T2 and T3 are advisory (T2 bounds are physically impossible to violate given the CLAMP in `metric_healthscore.sql`; T3 thresholds are design calls, not build breaks).
 
 ---
 
@@ -235,6 +242,40 @@ Revert to the previous phase in [spec 08 rollout](08_rollout_plan.md). If in sha
 
 ---
 
+## 7b. Tier 5 — Transition fidelity
+
+### 7b.1 What it tests
+
+Whether cARR, **in dollars the CFO can read**, actually shows the five places where the seat→consumption pricing pivot breaks seat-based accounting. Each check expresses one failure mode as a dollar delta between "what a seat-based book would report on these accounts" (`Σ committed_arr`) and "what cARR reports" (`Σ carr`). The gap has to be in the expected direction and at least the expected magnitude — otherwise the metric isn't doing the job the pivot requires.
+
+This tier is scoped tighter than T3. T3 asks *"does cARR beat ARR at identifying at-risk accounts in general?"*; T5 asks *"for each of the five specific failure modes we wrote into spec 02 §5, does cARR's dollar answer diverge from seat-based the way the pricing pivot demands?"* They're complementary: a metric can beat baselines on average (T3) and still miss a specific failure mode (T5).
+
+### 7b.2 Tests
+
+| ID | Failure mode | Seat-based reads | cARR reads | Pass threshold |
+|---|---|---|---|---|
+| `T5a` | **Shelfware** — signed, not consuming | full ACV (seat-based has no usage signal) | HS ≤ 0.40, band `at_risk_shelfware` | `(seat − cARR) / seat ≥ 0.45` on the shelfware-archetype subset |
+| `T5b` | **Overage** — consuming beyond entitlement | full ACV; no line item for overages | HS ∈ [1.10, 1.30], band `overage` | `(cARR − seat) / seat ≥ 0.05` on the band=`overage` subset |
+| `T5c` | **Spike-drop** — heavy early use, cliff | full ACV until contract ends | HS depressed via `SPIKE_DROP_MODIFIER`, band `spike_drop` or `at_risk_shelfware` | ≥80% of spike-drop-archetype accounts caught AND `(seat − cARR) / seat ≥ 0.20` on the subset |
+| `T5d` | **Expansion** — mid-term expansion contract | prices each contract line independently (no compounding signal) | HS > 1.0 via `EXPANSION_MODIFIER`, band `expansion` | `(cARR − seat) / seat ≥ 0.05` on the band=`expansion` subset |
+| `T5e` | **Orphans** — rogue usage with no contract match | no entity to attach the usage to | excluded upstream per D05 | orphan rows present in raw AND `int_usage_rolled.credits_90d ≤ int_orphan_usage.valid` (no orphan credit reaches the metric) |
+
+Thresholds are deliberately loose so they survive generator reseeds and v0.7.x-class parameter flips; they are calibrated off what the current spec 03 §2.1 formula + v0.7.1 parameters produce on the fixture, not off an externally imposed target.
+
+### 7b.3 Cadence and gating
+
+Runs on every PR that touches `/pipeline_and_tests/metric/`, `/pipeline_and_tests/mart/`, `params.py`, or this spec. **Stop-the-line on failure** — the build does not merge. Runs nightly on `main` against the latest production snapshot.
+
+### 7b.4 Consequence if failing
+
+Do not publish the revised book. A T5 failure means one of the five pricing-pivot failure modes has silently re-hidden itself behind the metric — that is a regression in the metric's business job, not a build error. Open a P0 with the Principal PM; do **not** widen the threshold to make the test pass (that's the most common failure mode for business-level evals). Diagnose the root cause — parameter drift, classifier change, fixture shift — and either roll back the offending change or amend spec 03 (with VPS + CFO sign-off) before the threshold is revised.
+
+### 7b.5 What T5 is not
+
+T5 is not an accuracy claim. It does not say "cARR measures churn risk to ±N%"; it says "cARR diverges from seat-based in the right direction on each of the five failure modes we wrote the metric to see." That's a weaker but more defensible claim — it's the claim the pricing pivot actually needs, and it's the claim the eval output can show to a CFO in under 30 seconds.
+
+---
+
 ## 8. Reporting
 
 ### 8.1 `evaluation_report.md`
@@ -278,15 +319,17 @@ PR opened / updated
   ↓
 Lint + unit tests (not in this spec's scope)
   ↓
-DQ P0 assertions  → block on fail (spec 05)
+DQ P0 assertions     → block on fail (spec 05)
   ↓
-T1 Correctness    → block on fail
+T1 Correctness       → block on fail
   ↓
-T2 Construct      → block on fail if formula/params changed
+T2 Construct         → warn on fail (bounds physically cannot violate)
   ↓
-T3 Decision       → block "adoption tag" on fail (advisory on general PRs)
+T3 Decision          → warn on fail; block "adoption tag" on fail
   ↓
-T4 Comp safety    → block "comp-ready tag" on fail (advisory on general PRs)
+T4 Comp safety       → block on fail
+  ↓
+T5 Transition fidelity → block on fail
   ↓
 Review + merge
 ```
@@ -320,4 +363,14 @@ On `main` branch post-merge, full eval suite runs nightly; results trend in `dq.
 | Principal PM | "Is this formula measuring what I claim?" | T2 |
 | VP Sales + CFO | "Is this metric better than what we have?" | T3 |
 | VP Sales + CFO | "Is this metric safe to tie comp to?" | T4 |
+| VP Sales + CFO | "Does this metric actually tell the seat→consumption story in dollars?" | T5 |
 | Internal Audit | "Is there a traceable artifact proving the above?" | §8.1 `evaluation_report.md` |
+
+---
+
+## Appendix C — Version history
+
+| Version | Date | Change | Rationale |
+|---|---|---|---|
+| 0.1 | 2026-04-19 | Initial draft (T1–T4). | Standard four-tier framework. |
+| 0.2 | 2026-04-21 | Added T5 — Transition fidelity (§7b). Reframed §1 around the seat→consumption pricing pivot. Updated §3 tier table and §9 CI block accordingly. | The original four tiers answer "is the metric implemented, valid, useful, and comp-safe?" — all metric-agnostic questions. They do not ask the cARR-specific question: "does the metric, in dollars, surface the five pricing-pivot failure modes we built it for?" T5 closes that gap. This is the eval tier the panel should read first. |

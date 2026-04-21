@@ -14,6 +14,12 @@
 
 ## 1. Purpose and scope
 
+### 1.0 Why this metric now — the pricing pivot
+
+SaaS pricing is moving from seats to consumption; AI is the forcing function (per-token cost structure makes per-seat licensing a mismatch, and the category is repricing on consumption this year). A measurement system built for the seat era — the one Committed ARR anchors — reads every signed dollar as an earned dollar. A consumption book has **five specific places where that assumption breaks**: shelfware, spike-drop, overage, mid-term expansion, orphan usage (the anomaly catalog from [spec 02 §5](02_data_model.md#5-known-anomaly-states)). cARR is the instrument that makes those five failure modes visible in dollars, *without* changing what the board sees or how Committed ARR rolls up.
+
+The evaluation framework [spec 06 v0.2](06_evaluation_framework.md) enforces this framing directly — the new **T5 Transition fidelity** tier asserts, per failure mode, that cARR's dollar answer diverges from a seat-based read in the expected direction and magnitude. A T5 fail means the metric stopped doing the job the pricing pivot requires and is stop-the-line.
+
 ### 1.1 What this spec is
 
 The authoritative, implementation-ready definition of **cARR** — the single GTM North Star number proposed in [spec 01](01_problem_statement.md). It specifies: the formula, the inputs, how every anomaly from [spec 02's catalog](02_data_model.md) is handled, the invariants any implementation must preserve, and the parameters exposed for future tuning.

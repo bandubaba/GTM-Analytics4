@@ -36,7 +36,7 @@ Read top to bottom if this is your first pass. The specs build on each other.
 | 03 | North Star metric | 0.7.1 | Draft | Principal PM | 2026-04-21 |
 | 04 | Pipeline architecture | 0.1 | Draft | Principal PM | 2026-04-19 |
 | 05 | Data quality | 0.1 | Draft | Principal PM | 2026-04-19 |
-| 06 | Evaluation framework | 0.1 | Draft | Principal PM | 2026-04-19 |
+| 06 | Evaluation framework | 0.2 | Draft | Principal PM | 2026-04-21 |
 | 07 | Dashboard | 0.1 | Draft | Principal PM | 2026-04-19 |
 | 08 | Rollout plan | 0.1 | Draft | Principal PM | 2026-04-19 |
 | 09 | Access & audit | 0.1 | Draft | Principal PM | 2026-04-19 |
