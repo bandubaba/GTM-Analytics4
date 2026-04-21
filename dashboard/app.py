@@ -179,31 +179,48 @@ def view_executive():
     arch_df = df.merge(arch_all, on="account_id", how="left")
     arch_df["archetype"] = arch_df.archetype.fillna("normal")
 
-    # also pull total generator row count to show the spec match cleanly
-    # (archetype CSV is 1000 rows; mart is 684 — because D05 orphan exclusion
-    # and D04 active-contract filter drop accounts from the metric)
-    generator_total = len(arch_all) if len(arch_all) else len(arch_df)
+    # Two universes to compare against the assignment target:
+    #   generator — all accounts on file (1000 rows; matches the assignment's
+    #               "generate 1000 accounts" framing)
+    #   in_mart   — the subset with an active contract on the as_of_date (684);
+    #               these are the accounts the metric actually classifies.
+    # We show both because the assignment's "~10% shelfware" reads naturally
+    # either way, and both should be at the spec target.
+    gen_total = len(arch_all) if len(arch_all) else len(arch_df)
     gen_counts = arch_all.archetype.value_counts() if len(arch_all) else arch_df.archetype.value_counts()
+    mart_total = len(arch_df)
+    mart_counts = arch_df.archetype.value_counts()
 
-    # Target distribution from the assignment
     spec_targets = {"shelfware": "~10%", "spike_drop": "~5%", "overage": "~15%",
                     "normal": "rest (~70%)"}
     spec_table = pd.DataFrame([
         {
             "archetype": a,
-            "n_generated": int(gen_counts.get(a, 0)),
-            "actual_pct": gen_counts.get(a, 0) / generator_total if generator_total else 0,
+            "n_generated":    int(gen_counts.get(a, 0)),
+            "pct_generated":  gen_counts.get(a, 0)  / gen_total  if gen_total  else 0,
+            "n_in_mart":      int(mart_counts.get(a, 0)),
+            "pct_in_mart":    mart_counts.get(a, 0) / mart_total if mart_total else 0,
             "assignment_target": spec_targets.get(a, "—"),
         }
         for a in ["shelfware", "spike_drop", "overage", "normal"]
     ])
     st.dataframe(
         spec_table.style.format({
-            "n_generated": "{:,.0f}",
-            "actual_pct": "{:.1%}",
+            "n_generated":   "{:,.0f}",
+            "pct_generated": "{:.1%}",
+            "n_in_mart":     "{:,.0f}",
+            "pct_in_mart":   "{:.1%}",
         }),
         use_container_width=True,
         hide_index=True,
+    )
+    st.caption(
+        f"**Generated** is all {gen_total:,} accounts on file. **In-mart** is the "
+        f"{mart_total:,} accounts with an active contract on the as_of_date — the "
+        f"subset the cARR formula actually scores. The other "
+        f"{gen_total - mart_total:,} accounts have expired, not-yet-started, or no "
+        "contracts; they're out of scope for *current* cARR. The archetype mix is "
+        "preserved across the filter, so both views hit the assignment targets."
     )
 
     # Orphan logs — the 5th assignment item
