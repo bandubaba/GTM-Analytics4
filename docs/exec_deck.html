@@ -2,23 +2,23 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>cARR — Executive Proposal</title>
+<title>cARR — Proposal for the CFO and VP Sales</title>
 <style>
   /* ============================================================
      Design tokens
      ============================================================ */
   :root {
-    --ink:      #0f172a;  /* slate-900  — primary text        */
-    --ink-2:    #334155;  /* slate-700  — secondary text      */
-    --ink-3:    #64748b;  /* slate-500  — tertiary / labels   */
-    --rule:     #e2e8f0;  /* slate-200  — hairlines           */
+    --ink:      #0f172a;
+    --ink-2:    #334155;
+    --ink-3:    #64748b;
+    --rule:     #e2e8f0;
     --bg:       #ffffff;
-    --bg-2:     #f8fafc;  /* slate-50                          */
-    --accent:   #1e3a8a;  /* indigo-900 — brand / headline    */
-    --accent-2: #3730a3;  /* indigo-800 — hover / secondary   */
-    --warn:     #b91c1c;  /* red-700    — paycheck-risk badge */
-    --hot:      #c2410c;  /* orange-700 — the -$17M number    */
-    --good:     #15803d;  /* green-700  — protection / ok     */
+    --bg-2:     #f8fafc;
+    --accent:   #1e3a8a;
+    --accent-2: #3730a3;
+    --hot:      #c2410c;
+    --good:     #15803d;
+    --ink-dark: #0b1220;
   }
 
   * { box-sizing: border-box; }
@@ -31,342 +31,371 @@
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
-  .num, .kpi-value, code {
-    font-variant-numeric: tabular-nums;
-    font-feature-settings: "tnum";
-  }
+  .num, code { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
   code, .mono {
     font-family: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
     font-size: 0.96em;
   }
 
   /* ============================================================
-     Slide frame — 16:9 at print, 1280×720 on screen
+     Slide frame — 16:9
      ============================================================ */
   @page { size: 13.333in 7.5in; margin: 0; }
-
   .slide {
-    width: 13.333in;
-    height: 7.5in;
+    width: 13.333in; height: 7.5in;
     background: var(--bg);
     padding: 0.55in 0.7in 0.55in 0.7in;
-    position: relative;
-    overflow: hidden;
-    page-break-after: always;
-    break-after: page;
+    position: relative; overflow: hidden;
+    page-break-after: always; break-after: page;
     margin: 0 auto 24px auto;
     box-shadow: 0 4px 16px rgba(15, 23, 42, 0.10);
   }
   .slide:last-child { page-break-after: avoid; break-after: avoid; }
 
-  /* slide header / footer */
   .hdr {
     position: absolute;
     top: 0.28in; left: 0.7in; right: 0.7in;
     display: flex; justify-content: space-between; align-items: baseline;
-    font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+    font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
     color: var(--ink-3);
   }
-  .hdr .brand { font-weight: 600; color: var(--accent); letter-spacing: 0.08em; }
+  .hdr .brand { font-weight: 700; color: var(--accent); letter-spacing: 0.1em; }
   .ftr {
     position: absolute;
     bottom: 0.32in; left: 0.7in; right: 0.7in;
     display: flex; justify-content: space-between; align-items: baseline;
     font-size: 10.5px; color: var(--ink-3);
-    letter-spacing: 0.02em;
   }
   .ftr .pg { font-variant-numeric: tabular-nums; font-weight: 500; }
-  .rule-top { position: absolute; top: 0.52in; left: 0.7in; right: 0.7in; height: 1px; background: var(--rule); }
+  .rule-top {
+    position: absolute; top: 0.52in; left: 0.7in; right: 0.7in;
+    height: 1px; background: var(--rule);
+  }
 
-  /* typography scale */
   h1.deck-title {
-    font-size: 56px; line-height: 1.05; font-weight: 700; letter-spacing: -0.02em;
-    margin: 0; color: var(--ink);
+    font-size: 48px; line-height: 1.08; font-weight: 700;
+    letter-spacing: -0.022em; margin: 0; color: var(--ink);
   }
   h1.slide-title {
-    font-size: 36px; line-height: 1.1; font-weight: 700; letter-spacing: -0.018em;
-    margin: 0 0 6px 0; color: var(--ink);
+    font-size: 36px; line-height: 1.1; font-weight: 700;
+    letter-spacing: -0.018em; margin: 0 0 10px 0; color: var(--ink);
   }
   .eyebrow {
-    font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
-    color: var(--accent); font-weight: 600; margin-bottom: 10px;
+    font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; margin-bottom: 12px;
   }
-  .subhead {
-    font-size: 18px; color: var(--ink-2); font-weight: 400; margin: 0 0 28px 0;
-    line-height: 1.45; max-width: 10.5in;
-  }
-  p { margin: 0 0 8px 0; }
-
-  /* helpers */
-  .row  { display: flex; gap: 36px; }
-  .col  { flex: 1; }
-  .stack > * + * { margin-top: 10px; }
-  .hero-tag {
-    margin-top: auto; padding: 16px 20px; background: var(--bg-2);
-    border-left: 4px solid var(--accent); font-size: 19px; color: var(--ink);
-    font-weight: 500; letter-spacing: -0.005em;
-  }
+  p { margin: 0; }
 
   /* ============================================================
-     Slide 1 — the problem
+     Slide 1 — Context
      ============================================================ */
   .s1 .content {
     height: 100%; display: flex; flex-direction: column;
-    padding-top: 0.3in; padding-bottom: 0.1in;
+    padding-top: 0.45in; padding-bottom: 0.3in;
   }
-  .s1 .lede {
-    font-size: 40px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1;
-    color: var(--ink); margin: 6px 0 22px 0;
+  .s1 .meta {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 18px;
   }
-  .s1 .lede .hot { color: var(--hot); }
-  .persona {
-    flex: 1; background: var(--bg-2); border: 1px solid var(--rule);
-    border-radius: 10px; padding: 22px 24px;
-    display: flex; flex-direction: column;
+  .s1 .meta .authors {
+    font-size: 12.5px; color: var(--ink-3); letter-spacing: 0.02em;
   }
-  .persona .role {
-    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
-    color: var(--accent); font-weight: 700; margin-bottom: 8px;
+  .s1 .sub {
+    margin-top: 20px;
+    font-size: 19px; font-weight: 400; color: var(--ink-2);
+    max-width: 11.5in; line-height: 1.5;
   }
-  .persona .quote {
-    font-size: 18px; line-height: 1.4; color: var(--ink); font-weight: 500;
-    margin-bottom: 14px; font-style: italic;
+  .s1 .modes-row {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;
+    margin-top: 34px;
   }
-  .persona ul { margin: 0; padding-left: 18px; color: var(--ink-2); font-size: 15px; }
-  .persona li { margin-bottom: 6px; line-height: 1.4; }
+  .mode-pill {
+    background: var(--bg-2); border: 1px solid var(--rule);
+    border-radius: 10px; padding: 16px 16px;
+  }
+  .mode-pill .n {
+    font-size: 11px; letter-spacing: 0.14em;
+    color: var(--accent); font-weight: 700; margin-bottom: 6px;
+  }
+  .mode-pill .h {
+    font-size: 15px; font-weight: 700; color: var(--ink); line-height: 1.2;
+    margin-bottom: 4px;
+  }
+  .mode-pill .d {
+    font-size: 12.5px; color: var(--ink-3); line-height: 1.4;
+  }
+
+  .s1 .anchor {
+    margin-top: auto;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 22px 26px; background: #fff7ed; border: 1px solid #fed7aa;
+    border-radius: 12px;
+  }
+  .s1 .anchor .big {
+    font-size: 46px; font-weight: 700; letter-spacing: -0.025em;
+    color: var(--hot); font-variant-numeric: tabular-nums; line-height: 1;
+  }
+  .s1 .anchor .cap {
+    font-size: 15px; color: var(--ink-2); text-align: right;
+    max-width: 7.2in; line-height: 1.45;
+  }
+  .s1 .anchor .cap b { color: var(--ink); font-weight: 700; }
 
   /* ============================================================
-     Slide 2 — the proposal
+     Slide 2 — Proposal
      ============================================================ */
   .s2 .formula {
-    margin: 26px 0 28px 0;
-    padding: 34px 24px;
+    margin: 32px 0 30px 0;
+    padding: 40px 24px;
     background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
     border-radius: 14px; border: 1px solid #e0e7ff;
     text-align: center;
   }
   .s2 .formula .eq {
     font-family: "SF Mono", Menlo, Consolas, monospace;
-    font-size: 46px; font-weight: 600; letter-spacing: -0.01em;
+    font-size: 50px; font-weight: 600; letter-spacing: -0.01em;
     color: var(--ink);
   }
   .s2 .formula .eq .var { color: var(--accent); }
   .s2 .formula .note {
-    margin-top: 10px; font-size: 13px; color: var(--ink-3); letter-spacing: 0.02em;
+    margin-top: 14px; font-size: 14px; color: var(--ink-3);
   }
-  .s2 .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
-  .card {
+  .s2 .claims { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .claim {
     background: var(--bg); border: 1px solid var(--rule); border-radius: 10px;
-    padding: 16px 18px; display: flex; flex-direction: column; min-height: 138px;
+    padding: 20px 20px;
   }
-  .card .tag {
-    font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
-    font-weight: 700; color: var(--accent); margin-bottom: 8px;
+  .claim .tag {
+    font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    font-weight: 700; color: var(--accent); margin-bottom: 10px;
   }
-  .card .h { font-size: 17px; font-weight: 600; color: var(--ink); margin-bottom: 6px; line-height: 1.25; }
-  .card .b { font-size: 13.5px; color: var(--ink-2); line-height: 1.4; }
-  .reassurance {
-    margin-top: 16px; padding: 10px 14px; background: #ecfdf5;
-    border: 1px solid #bbf7d0; border-radius: 8px;
-    font-size: 13.5px; color: #064e3b;
-    display: flex; gap: 28px; justify-content: space-around;
+  .claim .h {
+    font-size: 17px; font-weight: 600; color: var(--ink); line-height: 1.3;
+    margin-bottom: 8px;
   }
-  .reassurance b { font-weight: 700; color: #065f46; }
+  .claim .sub {
+    font-size: 12.5px; color: var(--ink-3); line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+  }
 
   /* ============================================================
-     Slide 3 — what it reveals
+     Slide 3 — Evidence
      ============================================================ */
-  .s3 .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 4px; }
+  .s3 .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 18px; }
   .kpi {
-    padding: 16px 18px; border-radius: 10px; border: 1px solid var(--rule);
+    padding: 20px 22px; border-radius: 10px; border: 1px solid var(--rule);
     background: var(--bg-2);
   }
-  .kpi .lbl { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
-              color: var(--ink-3); font-weight: 600; margin-bottom: 6px; }
-  .kpi .v   { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); }
-  .kpi.hot  { background: #fff7ed; border-color: #fed7aa; }
+  .kpi .lbl {
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-3); font-weight: 700; margin-bottom: 8px;
+  }
+  .kpi .v {
+    font-size: 30px; font-weight: 700; letter-spacing: -0.015em; color: var(--ink);
+  }
+  .kpi.hot { background: #fff7ed; border-color: #fed7aa; }
   .kpi.hot .v { color: var(--hot); }
 
-  /* Per-failure-mode evidence table — the T5 story visualized */
   .s3 .modes {
-    margin-top: 16px; width: 100%; border-collapse: collapse;
-    font-size: 13px;
+    margin-top: 28px; width: 100%; border-collapse: collapse;
+    font-size: 15px;
   }
   .s3 .modes th {
-    text-align: left; padding: 8px 10px;
-    font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
+    text-align: left; padding: 12px 14px;
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
     color: var(--ink-3); font-weight: 700; border-bottom: 1px solid var(--rule);
   }
   .s3 .modes th.num { text-align: right; }
   .s3 .modes td {
-    padding: 9px 10px; border-bottom: 1px solid var(--rule);
+    padding: 15px 14px; border-bottom: 1px solid var(--rule);
     color: var(--ink-2); line-height: 1.4;
   }
-  .s3 .modes td.mode { color: var(--ink); font-weight: 600; font-size: 14px; }
-  .s3 .modes td.num  { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 500; }
-  .s3 .modes td.delta-down { text-align: right; font-variant-numeric: tabular-nums; color: var(--hot); font-weight: 700; }
-  .s3 .modes td.delta-up   { text-align: right; font-variant-numeric: tabular-nums; color: var(--good); font-weight: 700; }
+  .s3 .modes td.mode { color: var(--ink); font-weight: 600; font-size: 16px; }
+  .s3 .modes td.num { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 500; }
+  .s3 .modes td.delta-down { text-align: right; font-variant-numeric: tabular-nums; color: var(--hot); font-weight: 700; font-size: 16px; }
+  .s3 .modes td.delta-up { text-align: right; font-variant-numeric: tabular-nums; color: var(--good); font-weight: 700; font-size: 16px; }
   .s3 .modes td.delta-neutral { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-2); font-weight: 600; }
-  .s3 .modes td.story { color: var(--ink-2); font-size: 12.5px; }
   .s3 .modes tr:last-child td { border-bottom: none; }
-  .s3 .modes tfoot td {
-    font-weight: 700; color: var(--ink); border-top: 2px solid var(--ink);
-    border-bottom: none; padding-top: 10px;
-  }
-
-  .demo-callout {
-    margin-top: 16px;
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 12px 20px; border-radius: 10px;
-    background: var(--accent); color: white;
-  }
-  .demo-callout .l { font-size: 14px; font-weight: 500; }
-  .demo-callout .r { font-family: "SF Mono", Menlo, monospace; font-size: 14px; font-weight: 600; }
 
   /* ============================================================
-     Slide 4 — objections
+     Slide 4 + 5 — CFO and VPS lenses: Q&A cards
      ============================================================ */
-  .s4 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-  .objection {
-    background: var(--bg); border: 1px solid var(--rule); border-radius: 10px;
-    padding: 20px 22px; min-height: 2.2in;
+  .qa-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    margin-top: 22px;
   }
-  .objection .q {
+  .qa {
+    background: var(--bg); border: 1px solid var(--rule); border-radius: 10px;
+    padding: 20px 22px;
+  }
+  .qa .q {
     font-size: 16.5px; font-weight: 700; color: var(--ink);
-    margin-bottom: 10px; line-height: 1.3; letter-spacing: -0.005em;
+    margin-bottom: 12px; line-height: 1.3; letter-spacing: -0.005em;
   }
-  .objection .q::before {
-    content: "";
+  .qa .q::before {
+    content: "Q.";
+    color: var(--accent); font-weight: 800; margin-right: 8px;
+    letter-spacing: 0;
   }
-  .objection .a {
-    font-size: 14.5px; color: var(--ink-2); line-height: 1.55;
+  .qa .a {
+    font-size: 14.5px; color: var(--ink-2); line-height: 1.5;
   }
-  .objection .a::before {
-    content: "";
-  }
-  .objection .a b { color: var(--ink); font-weight: 600; }
+  .qa .a b { color: var(--ink); font-weight: 600; }
 
-  /* ============================================================
-     Slide 5 — how it was built
-     ============================================================ */
-  .s5 .cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
-  .pillar {
+  /* slide 5 split layout */
+  .s5 .split {
+    display: grid; grid-template-columns: 1.05fr 1fr; gap: 20px;
+    margin-top: 22px;
+  }
+  .s5 .qstack { display: flex; flex-direction: column; gap: 12px; }
+  .s5 .qa-mini {
     background: var(--bg); border: 1px solid var(--rule); border-radius: 10px;
-    padding: 20px 22px; min-height: 4.2in;
+    padding: 16px 18px;
   }
-  .pillar .step {
-    font-family: "SF Mono", Menlo, monospace;
-    font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 8px;
+  .s5 .qa-mini .q {
+    font-size: 15px; font-weight: 700; color: var(--ink);
+    margin-bottom: 8px; line-height: 1.3;
   }
-  .pillar h4 { margin: 0 0 12px 0; font-size: 18px; color: var(--ink); font-weight: 700; letter-spacing: -0.01em; }
-  .pillar p { font-size: 13.5px; color: var(--ink-2); line-height: 1.5; }
-  .pillar ul { margin: 6px 0 0 0; padding-left: 16px; font-size: 13px; color: var(--ink-2); line-height: 1.55; }
-  .pillar li { margin-bottom: 5px; }
-  .pillar li code { font-size: 11.5px; background: var(--bg-2); padding: 1px 5px; border-radius: 3px; color: var(--ink); }
-  .pillar .caught {
-    margin-top: 10px; padding: 10px 12px; background: #f8fafc;
-    border-left: 3px solid #94a3b8; border-radius: 4px;
-    font-size: 12.5px; color: var(--ink-2); line-height: 1.5;
+  .s5 .qa-mini .q::before {
+    content: "Q.";
+    color: var(--accent); font-weight: 800; margin-right: 6px;
   }
-  .pillar .caught b { color: var(--ink); font-weight: 700; }
+  .s5 .qa-mini .a {
+    font-size: 13.5px; color: var(--ink-2); line-height: 1.5;
+  }
+  .s5 .qa-mini .a b { color: var(--ink); font-weight: 600; }
+
+  /* Rep statement mock — dark, terminal-adjacent */
+  .rep-stmt {
+    background: var(--ink-dark); color: #e2e8f0;
+    border-radius: 12px; padding: 22px 24px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12.5px; line-height: 1.7;
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.25);
+  }
+  .rep-stmt .rh {
+    display: flex; justify-content: space-between;
+    padding-bottom: 10px; margin-bottom: 12px;
+    border-bottom: 1px solid #1e293b;
+    font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: #64748b; font-weight: 700;
+  }
+  .rep-stmt .rh .right { color: #94a3b8; }
+  .rep-stmt .kv {
+    display: flex; justify-content: space-between; margin-bottom: 5px;
+  }
+  .rep-stmt .kv .k { color: #94a3b8; }
+  .rep-stmt .kv .v { color: #f1f5f9; font-weight: 600; }
+  .rep-stmt .kv .v.flag { color: #fdba74; }
+  .rep-stmt hr {
+    border: 0; border-top: 1px dashed #1e293b; margin: 12px 0;
+  }
+  .rep-stmt .sec {
+    color: #7dd3fc; font-size: 10.5px; letter-spacing: 0.14em;
+    text-transform: uppercase; font-weight: 700; margin-bottom: 8px;
+  }
+  .rep-stmt .line {
+    display: flex; justify-content: space-between; margin-bottom: 3px;
+  }
+  .rep-stmt .line .k { color: #94a3b8; }
+  .rep-stmt .line .v { color: #e2e8f0; }
+  .rep-stmt .line .v.warn { color: #fdba74; font-weight: 600; }
+  .rep-stmt .ask-hint {
+    margin-top: 12px; padding: 8px 10px;
+    background: #1e3a8a; color: #c7d2fe;
+    border-radius: 6px; font-size: 11.5px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .rep-stmt .ask-hint .k { color: #93c5fd; letter-spacing: 0.1em; text-transform: uppercase; font-size: 10px; font-weight: 700; }
 
   /* ============================================================
-     Slide 6 — the ask
+     Slide 6 — Rollout + Ask
      ============================================================ */
-  .s6 .phases { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 2px; }
+  .s6 .phases {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+    margin-top: 26px;
+  }
   .phase {
     background: var(--bg); border: 1px solid var(--rule); border-radius: 10px;
-    padding: 20px 22px; position: relative;
+    padding: 22px 24px; position: relative;
   }
   .phase .n {
-    position: absolute; top: -14px; left: 20px;
+    position: absolute; top: -14px; left: 22px;
     background: var(--accent); color: white; font-weight: 700;
-    padding: 3px 12px; border-radius: 20px; font-size: 12px; letter-spacing: 0.05em;
+    padding: 3px 14px; border-radius: 20px; font-size: 12px; letter-spacing: 0.08em;
   }
-  .phase .when { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; font-weight: 600; }
-  .phase h4 { margin: 0 0 10px 0; font-size: 17px; color: var(--ink); font-weight: 700; }
-  .phase p { font-size: 13.5px; color: var(--ink-2); line-height: 1.5; }
+  .phase .when {
+    font-size: 11.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--ink-3); margin: 10px 0 8px 0; font-weight: 700;
+  }
+  .phase h4 {
+    margin: 0 0 10px 0; font-size: 19px; color: var(--ink);
+    font-weight: 700; letter-spacing: -0.01em;
+  }
+  .phase .tag {
+    font-size: 13.5px; color: var(--ink-2); line-height: 1.5;
+  }
+  .phase .gate {
+    margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--rule);
+    font-size: 12.5px; color: var(--ink-3); line-height: 1.5;
+  }
+  .phase .gate b { color: var(--good); font-weight: 700; }
 
   .ask {
-    margin-top: 22px; padding: 22px 26px; border-radius: 12px;
+    margin-top: 22px; padding: 24px 28px; border-radius: 12px;
     background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
     color: white;
   }
   .ask h3 {
-    margin: 0 0 10px 0; font-size: 16px; font-weight: 700;
-    letter-spacing: 0.06em; text-transform: uppercase;
+    margin: 0 0 14px 0; font-size: 13px; font-weight: 700;
+    letter-spacing: 0.16em; text-transform: uppercase;
     color: #c7d2fe;
   }
-  .ask ol { margin: 0; padding-left: 22px; }
-  .ask li { font-size: 16px; line-height: 1.55; margin-bottom: 4px; font-weight: 500; }
+  .ask ol { margin: 0; padding-left: 24px; }
+  .ask li {
+    font-size: 16.5px; line-height: 1.5; margin-bottom: 6px; font-weight: 500;
+  }
   .ask li b { color: #fef3c7; font-weight: 700; }
-
-  .demo-link {
-    position: absolute; bottom: 0.32in; right: 0.7in;
-    font-family: "SF Mono", Menlo, monospace;
-    font-size: 12px; color: var(--accent); font-weight: 600;
-  }
-
-  /* ============================================================
-     Title block (slide 1 only gets the deck title)
-     ============================================================ */
-  .s1 .deck-meta {
-    display: flex; justify-content: space-between; align-items: baseline;
-    margin-bottom: 14px;
-  }
-  .s1 .deck-meta .authors {
-    font-size: 13px; color: var(--ink-3); letter-spacing: 0.02em;
-  }
 </style>
 </head>
 <body>
 
 <!-- ============================================================================
-     SLIDE 1 — Context: the pricing pivot
+     SLIDE 1 — Context
      ============================================================================ -->
 <section class="slide s1">
   <div class="hdr">
-    <span class="brand">cARR &middot; Executive Proposal</span>
+    <span class="brand">cARR &middot; Proposal for the CFO and VP Sales</span>
     <span>Context</span>
   </div>
   <div class="rule-top"></div>
 
   <div class="content">
-    <div class="deck-meta" style="margin-top: 0.22in;">
-      <div class="eyebrow">The GTM instrument for the seat &rarr; consumption pivot</div>
+    <div class="meta">
+      <div class="eyebrow">The case for change</div>
       <div class="authors">Rajesh Kadam &middot; April 2026</div>
     </div>
 
-    <h1 class="deck-title">SaaS pricing is moving from seats to consumption.<br/>Our measurement system has to move with it.</h1>
+    <h1 class="deck-title">SaaS has repriced. Our measurement has not.</h1>
 
-    <div class="lede" style="margin-top: 24px; font-size: 20px; font-weight: 400; color: var(--ink-2); max-width: 11in; line-height: 1.5;">
-      AI is the forcing function &mdash; per-token cost structure makes per-seat licensing a mismatch, and the rest of the category is repricing on consumption this year. Committed ARR was built for the seat era; in the consumption era it is silent on five specific places the signed dollar does not equal the earned dollar.
+    <p class="sub">
+      Committed ARR books every signed dollar as earned &mdash; a workable approximation under seat pricing and a silent one under consumption. There are five places the signed dollar stops equaling the earned dollar, and Committed ARR shows zero movement on all of them until the contract expires.
+    </p>
+
+    <div class="modes-row">
+      <div class="mode-pill"><div class="n">01</div><div class="h">Shelfware</div><div class="d">Signed, not consuming.</div></div>
+      <div class="mode-pill"><div class="n">02</div><div class="h">Spike-drop</div><div class="d">Heavy early use, then the cliff.</div></div>
+      <div class="mode-pill"><div class="n">03</div><div class="h">Overage</div><div class="d">Consuming beyond entitlement.</div></div>
+      <div class="mode-pill"><div class="n">04</div><div class="h">Mid-term expansion</div><div class="d">Second contract compounds.</div></div>
+      <div class="mode-pill"><div class="n">05</div><div class="h">Orphan usage</div><div class="d">Consumption with no contract.</div></div>
     </div>
 
-    <div class="row" style="margin-top: 28px; flex: 1;">
-      <div class="persona col">
-        <div class="role">The pivot, in one line</div>
-        <ul style="margin-top: 2px;">
-          <li><b>Seat era:</b> price is a function of licenses; the close <em>is</em> the outcome.</li>
-          <li><b>Consumption era:</b> price is a function of usage; the close is the <em>start</em> of the outcome.</li>
-          <li>The measurement system a seat-based book relies on (<span class="num">Committed ARR</span>) reads every signed dollar as earned. That is a workable approximation under seat pricing. It is not under consumption.</li>
-        </ul>
+    <div class="anchor">
+      <div class="big">&minus;$16.6M</div>
+      <div class="cap">
+        <b>Hidden on our own 1,000-account book, today.</b><br/>
+        The gap between what Committed ARR says we earned and what the consumption signal says we actually earned. The gap compounds every quarter the pricing pivot runs.
       </div>
-
-      <div class="persona col">
-        <div class="role">Five places the assumption breaks &mdash; and Committed ARR is silent</div>
-        <ul style="margin-top: 2px;">
-          <li><b>Shelfware</b> &mdash; signed, not consuming. Seat-based books full ACV.</li>
-          <li><b>Spike-drop</b> &mdash; heavy early use, then the cliff. Still books full ACV until expiry.</li>
-          <li><b>Overage</b> &mdash; consuming beyond entitlement. Seat-based has no line item for this.</li>
-          <li><b>Mid-term expansion</b> &mdash; second contract compounds. Priced line-by-line, compounding invisible.</li>
-          <li><b>Orphaned usage</b> &mdash; rogue consumption with no contract match. No hook in seat-based accounting.</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="hero-tag" style="margin-top: 22px;">
-      cARR is a bounded, rules-based read that makes all five failure modes visible in dollars &mdash; without changing what the board sees or how Committed ARR rolls up.
     </div>
   </div>
 
@@ -377,88 +406,76 @@
 </section>
 
 <!-- ============================================================================
-     SLIDE 2 — The Proposal
+     SLIDE 2 — Proposal
      ============================================================================ -->
 <section class="slide s2">
   <div class="hdr">
-    <span class="brand">cARR &middot; Executive Proposal</span>
+    <span class="brand">cARR &middot; Proposal for the CFO and VP Sales</span>
     <span>Proposal</span>
   </div>
   <div class="rule-top"></div>
 
-  <div style="margin-top: 0.28in;">
-    <div class="eyebrow">Proposal</div>
-    <h1 class="slide-title">cARR &mdash; the instrument built to see the five failure modes the pivot creates.</h1>
-    <p class="subhead">
-      A single dollar-denominated figure that preserves Committed ARR's rollup and auditability, and applies a bounded, rules-based <span class="num">HealthScore</span> that reflects the five consumption-era failure modes &mdash; in a form a rep can read and a CFO can defend.
-    </p>
+  <div style="margin-top: 0.45in;">
+    <div class="eyebrow">The proposal</div>
+    <h1 class="slide-title">cARR. One figure. Additive to what the board already sees.</h1>
   </div>
 
   <div class="formula">
     <div class="eq"><span class="var">cARR</span> &nbsp;=&nbsp; <span class="var">Committed_ARR</span> &nbsp;&times;&nbsp; <span class="var">HealthScore</span></div>
-    <div class="note">HealthScore &isin; [0.40, 1.30] &mdash; bounded, interpretable, rules-based &mdash; spec 03 v0.7.1</div>
+    <div class="note">HealthScore &isin; [0.40, 1.30] &mdash; bounded, interpretable, rules-based</div>
   </div>
 
-  <div class="cards">
-    <div class="card">
+  <div class="claims">
+    <div class="claim">
       <div class="tag">Bounded</div>
-      <div class="h">Worst case is known before the pivot.</div>
-      <div class="b">HealthScore floor <span class="num">0.40</span>, ceiling <span class="num">1.30</span>. No single account &mdash; shelfware or explosive &mdash; can move a rep's attainment by more than the cap, a property a seat-based comp plan takes for granted and a naive consumption score does not.</div>
+      <div class="h">Worst case is known before deployment.</div>
+      <div class="sub">Floor 0.40 &middot; Ceiling 1.30</div>
     </div>
-    <div class="card">
+    <div class="claim">
       <div class="tag">Rules-based</div>
-      <div class="h">Publishable during a pricing pivot.</div>
-      <div class="b">SQL rules, not a learned model. A rep in a comp dispute can read the line that moved her HealthScore. A learned score during a pricing pivot is a double black box: pricing changed, comp changed, and neither is explainable.</div>
+      <div class="h">A rep in a dispute can read the rule that moved her score.</div>
+      <div class="sub">SQL &mdash; not a learned model</div>
     </div>
-    <div class="card">
-      <div class="tag">Fair to new logos</div>
-      <div class="h">No adoption signal, no penalty.</div>
-      <div class="b">Accounts with no usage posted yet default to <span class="num">HealthScore&nbsp;=&nbsp;1.00</span> &mdash; full booking credit during the pre-signal window. A single-line rule (D12b), not a four-parameter ramp curve to fight over every comp cycle.</div>
-    </div>
-    <div class="card">
+    <div class="claim">
       <div class="tag">Additive</div>
-      <div class="h">The seat-era rollup survives.</div>
-      <div class="b">cARR sits alongside Committed ARR on the existing rollup. Committed ARR continues to report to the board unchanged &mdash; we are not asking finance or audit to migrate off their anchor during the pivot.</div>
+      <div class="h">Committed ARR keeps rolling up to the board unchanged.</div>
+      <div class="sub">No restatement, no re-forecast to the Street</div>
     </div>
-  </div>
-
-  <div class="reassurance">
-    <span><b>Auditable</b> &mdash; every rule cites a written spec section</span>
-    <span><b>Additive</b> &mdash; rolls up by rep, region, segment, and time</span>
-    <span><b>Bounded</b> &mdash; worst-case account-level impact is known pre-deployment</span>
+    <div class="claim">
+      <div class="tag">Reversible</div>
+      <div class="h">Rollback is one decision, not a data migration.</div>
+      <div class="sub">Automated if comp-safety gate fails</div>
+    </div>
   </div>
 
   <div class="ftr">
-    <span>cARR = Committed_ARR &times; HealthScore &mdash; spec 03 v0.7.1</span>
+    <span>cARR = Committed_ARR &times; HealthScore &mdash; HealthScore is a bounded, rules-based multiplier</span>
     <span class="pg">2 / 6</span>
   </div>
 </section>
 
 <!-- ============================================================================
-     SLIDE 3 — Evidence: what the pivot hides and cARR surfaces, in dollars
+     SLIDE 3 — Evidence
      ============================================================================ -->
 <section class="slide s3">
   <div class="hdr">
-    <span class="brand">cARR &middot; Executive Proposal</span>
+    <span class="brand">cARR &middot; Proposal for the CFO and VP Sales</span>
     <span>Evidence</span>
   </div>
   <div class="rule-top"></div>
 
-  <div style="margin-top: 0.28in;">
-    <div class="eyebrow">What seat-based misses &mdash; in dollars from our own book</div>
-    <h1 class="slide-title">cARR, edge case by edge case, on the 1,000-account snapshot.</h1>
-    <p class="subhead">
-      Each row is one of the five failure modes the pricing pivot creates. <span class="num">Seat read</span> is what a seat-based accounting would report (full <span class="num">Committed_ARR</span> on the affected accounts). <span class="num">cARR read</span> is what the pipeline produces today. All values reproducible from the T5 eval suite.
-    </p>
+  <div style="margin-top: 0.45in;">
+    <div class="eyebrow">Evidence &mdash; our own 1,000-account book, today</div>
+    <h1 class="slide-title">$16.6M surfaced. Mode by mode.</h1>
   </div>
 
   <div class="kpis">
     <div class="kpi">
-      <div class="lbl">Committed ARR (seat-based)</div>
+      <div class="lbl">Committed ARR</div>
       <div class="v num">$133.2M</div>
     </div>
     <div class="kpi">
-      <div class="lbl">cARR (consumption-fidelity)</div>
+      <div class="lbl">cARR</div>
       <div class="v num">$116.6M</div>
     </div>
     <div class="kpi hot">
@@ -474,262 +491,244 @@
   <table class="modes">
     <thead>
       <tr>
-        <th style="width: 1.4in;">Failure mode</th>
-        <th class="num" style="width: 0.55in;">Accts</th>
-        <th class="num" style="width: 0.85in;">Seat read</th>
-        <th class="num" style="width: 0.85in;">cARR read</th>
-        <th class="num" style="width: 0.95in;">&Delta; (dollars / %)</th>
-        <th>What seat-based was missing</th>
+        <th style="width: 2.2in;">Failure mode</th>
+        <th class="num">Seat read</th>
+        <th class="num">cARR read</th>
+        <th class="num" style="width: 2.0in;">&Delta; (dollars / %)</th>
       </tr>
     </thead>
     <tbody>
       <tr>
         <td class="mode">Shelfware</td>
-        <td class="num">100</td>
         <td class="num">$14.1M</td>
         <td class="num">$5.6M</td>
         <td class="delta-down">&minus;$8.5M &nbsp;&minus;60%</td>
-        <td class="story">Signed, not consuming. Seat-based pays full ACV until expiry; cARR floors HealthScore at <span class="num">0.40</span>.</td>
       </tr>
       <tr>
         <td class="mode">Spike-drop</td>
-        <td class="num">50</td>
         <td class="num">$5.5M</td>
         <td class="num">$2.3M</td>
         <td class="delta-down">&minus;$3.2M &nbsp;&minus;58%</td>
-        <td class="story">Heavy early use, then the cliff. The seat read is flat until the contract ends; cARR sees the cliff the quarter it happens.</td>
       </tr>
       <tr>
         <td class="mode">Overage</td>
-        <td class="num">178</td>
         <td class="num">$23.1M</td>
         <td class="num">$27.1M</td>
         <td class="delta-up">+$4.0M &nbsp;+17%</td>
-        <td class="story">Consuming beyond entitlement. A seat-based book has no line item for this; cARR books the upside, capped at <span class="num">1.30&times;</span>.</td>
       </tr>
       <tr>
         <td class="mode">Mid-term expansion</td>
-        <td class="num">6</td>
         <td class="num">$1.7M</td>
         <td class="num">$1.9M</td>
         <td class="delta-up">+$0.3M &nbsp;+16%</td>
-        <td class="story">Second contract compounds. Seat-based prices each line independently; cARR applies the <span class="num">EXPANSION_MODIFIER</span> once the second contract is active and U&nbsp;&gt;&nbsp;1.0.</td>
       </tr>
       <tr>
         <td class="mode">Orphan usage</td>
-        <td class="num">350 rows</td>
         <td class="num">&mdash;</td>
         <td class="num">&mdash;</td>
-        <td class="delta-neutral">72.7K credits</td>
-        <td class="story">Rogue consumption with no contract match. No hook in seat-based; D05 excludes cleanly so no rep is paid against broken data.</td>
+        <td class="delta-neutral">72.7K credits excluded upstream</td>
       </tr>
     </tbody>
   </table>
 
-  <div class="demo-callout">
-    <div class="l">Rows reproducible from the T5 eval &mdash; every &Delta; is an asserted threshold, not a one-off read</div>
-    <div class="r">python pipeline_and_tests/evals/run_evals.py</div>
-  </div>
-
   <div class="ftr">
-    <span>Source: pipeline_and_tests/data &mdash; snapshot 2026-04-21 (v0.7.1) &middot; T5 suite</span>
+    <span>Snapshot 2026-04-21 &middot; every &Delta; is an asserted threshold in the comp-safety test suite, not a one-off read</span>
     <span class="pg">3 / 6</span>
   </div>
 </section>
 
 <!-- ============================================================================
-     SLIDE 4 — Considerations pressure-tested
+     SLIDE 4 — For the CFO
      ============================================================================ -->
 <section class="slide s4">
   <div class="hdr">
-    <span class="brand">cARR &middot; Executive Proposal</span>
-    <span>Considerations</span>
+    <span class="brand">cARR &middot; Proposal for the CFO and VP Sales</span>
+    <span>For the CFO</span>
   </div>
   <div class="rule-top"></div>
 
-  <div style="margin-top: 0.28in;">
-    <div class="eyebrow">Considerations specific to a pricing pivot</div>
-    <h1 class="slide-title">Four decisions a measurement change during a pricing pivot has to earn.</h1>
-    <p class="subhead">
-      The risk during a pivot is not the math &mdash; it is that pricing and comp change at once, and the field loses trust. Each of these was vetted against the spec and the eval framework before review; the mitigations are in the pipeline today, not on a roadmap.
-    </p>
+  <div style="margin-top: 0.45in;">
+    <div class="eyebrow">For the CFO</div>
+    <h1 class="slide-title">What changes. What doesn't. For finance and the board.</h1>
   </div>
 
-  <div class="grid">
-    <div class="objection">
-      <div class="q">Field trust when pricing <em>and</em> comp are both moving.</div>
+  <div class="qa-grid">
+    <div class="qa">
+      <div class="q">What do the board and the Street see?</div>
       <div class="a">
-        A single-cycle <b>shadow-comp window</b> precedes any change in paid compensation. Both figures appear on the monthly rep statement; comp remains paid on Committed ARR. Automated rollback to Committed-based comp if drift exceeds the agreed threshold or any T4/T5 eval fails. Because the rule is SQL &mdash; not a learned model &mdash; a rep in a dispute can read the exact line that moved her HealthScore.
+        <b>Committed ARR continues reporting unchanged</b> in the board pack and the 10-Q. cARR is an internal management lens this year. No restatement. No re-forecast to the Street. IR determines if and when cARR appears externally &mdash; a separate decision, gated on one full reporting cycle of internal use.
       </div>
     </div>
 
-    <div class="objection">
-      <div class="q">Why bounded rules, not a learned score, during the pivot.</div>
+    <div class="qa">
+      <div class="q">Does our forecast get better or worse?</div>
       <div class="a">
-        During a pricing pivot a <em>learned</em> HealthScore is a double black box: the pricing changed, the comp driver changed, and the weights are not defensible line-by-line. Bounded rules keep the metric publishable, auditable, and reversible in one PR. A learned prioritization layer is proposed for v1.5 &mdash; <em>on top of</em> rule-based cARR, not inside it &mdash; once labeled outcomes from shadow comp are available.
+        <b>More stable against consumption shocks.</b> A shelfware account moves &minus;60% in cARR and 0% in Committed ARR until expiry &mdash; meaning the Committed forecast is over-reading by construction on accounts the pivot has created. cARR shortens the gap between forecast and post-close reality.
       </div>
     </div>
 
-    <div class="objection">
-      <div class="q">Proof the metric still sees the pivot's failure modes.</div>
+    <div class="qa">
+      <div class="q">Restatement and audit &mdash; what's the rule when the data changes after close?</div>
       <div class="a">
-        Sixteen automated evals across <b>five tiers</b> &mdash; including the new <b>T5 Transition fidelity</b> tier, which asserts per failure mode (shelfware, spike-drop, overage, expansion, orphans) that cARR's dollar answer diverges from a seat-based read in the expected direction and magnitude. T1, T4, and T5 are stop-the-line: a single regression on a pricing-pivot failure mode halts deployment, no exceptions.
+        <b>Month-end snapshots are frozen.</b> A rep's Q1 figure cannot change after close. Post-close truth flows through <b>forward adjustments</b> on the next cycle &mdash; the way finance already handles bookings corrections. No retroactive comp. Full audit trail on every HealthScore input.
       </div>
     </div>
 
-    <div class="objection">
-      <div class="q">New-logo fairness, without a tuning fight mid-pivot.</div>
+    <div class="qa">
+      <div class="q">What's the comp-expense delta?</div>
       <div class="a">
-        <b>D12b &mdash; pre-signal trust.</b> When an account has no usage posted yet (<code style="font-size:12.5px;">U</code> is undefined), <code style="font-size:12.5px;">HealthScore&nbsp;=&nbsp;1.00</code> by default &mdash; full booking credit during the pre-signal window. A one-line rule with zero tuning parameters, replacing the earlier v0.6 four-knob ramp blend that every comp cycle would re-litigate. During a pricing pivot, fewer knobs is the whole point.
+        <b>0.875 portfolio HS is a 12.5% variable-pay haircut if passed through naively. We are not going to pass it through naively.</b> Phase 2 shadow comp quantifies the per-rep and aggregate delta before a dollar moves. OTE and quota are rebalanced against cARR at the Phase 3 FY boundary &mdash; a design input, not an aftershock.
       </div>
     </div>
   </div>
 
   <div class="ftr">
-    <span>Mitigations map to specs 05 (DQ) &middot; 06 v0.2 (Evals, T5) &middot; 08 (Rollout) &middot; 03 §D12b</span>
+    <span>Rules map to: D06 snapshot immutability &middot; spec 08 rollout &middot; spec 09 audit &amp; access</span>
     <span class="pg">4 / 6</span>
   </div>
 </section>
 
 <!-- ============================================================================
-     SLIDE 5 — Methodology
+     SLIDE 5 — For the VP Sales
      ============================================================================ -->
 <section class="slide s5">
   <div class="hdr">
-    <span class="brand">cARR &middot; Executive Proposal</span>
-    <span>Methodology</span>
+    <span class="brand">cARR &middot; Proposal for the CFO and VP Sales</span>
+    <span>For the VP Sales</span>
   </div>
   <div class="rule-top"></div>
 
-  <div style="margin-top: 0.28in;">
-    <div class="eyebrow">How this was built &mdash; for a pricing pivot</div>
-    <h1 class="slide-title">Spec-first, with an AI coding assistant in the loop.</h1>
-    <p class="subhead">
-      A measurement change during a pricing pivot has to be traceable, reversible, and provably doing the job. Every artifact &mdash; metric, pipeline, tests, dashboard &mdash; was developed against a written specification with explicit decision records. The assistant accelerated drafting; a human signed off on every merge.
-    </p>
+  <div style="margin-top: 0.45in;">
+    <div class="eyebrow">For the VP Sales</div>
+    <h1 class="slide-title">What changes. What doesn't. For the field.</h1>
   </div>
 
-  <div class="cols">
-    <div class="pillar">
-      <div class="step">01 &middot; Specifications and decision records</div>
-      <h4>The argument before the code.</h4>
-      <p>
-        Twelve markdown specifications, thirteen architecture decision records (ADRs &mdash; including one supersedence, D12&rarr;D12b) in a shared decision log. Every code file cites the spec section it implements, and parameter changes require a spec amendment in the same pull request &mdash; the discipline a pricing pivot depends on.
-      </p>
-      <ul>
-        <li>Spec 03 v0.7.1 &mdash; the formula, new-logo fairness rule, and 2026-04-21 calibration</li>
-        <li>Spec 05 &mdash; data-quality catalog (16 assertions)</li>
-        <li>Spec 06 v0.2 &mdash; eval framework, now <b>five tiers</b> including T5 Transition fidelity (16 checks)</li>
-        <li>Spec 11 &mdash; the AI product surface</li>
-      </ul>
+  <div class="split">
+    <div class="qstack">
+      <div class="qa-mini">
+        <div class="q">Does this punish my top reps?</div>
+        <div class="a">
+          A clean book moves within &plusmn;5&ndash;10% of Committed attainment. The <b>floor at HS 0.40</b> caps any single-account downside. Phase 1 publishes per-rep distributions; any rep whose book skews shelfware gets <b>quota rebalanced</b>, not comp cut.
+        </div>
+      </div>
+      <div class="qa-mini">
+        <div class="q">Is this a mid-year change to paid comp?</div>
+        <div class="a">
+          <b>No.</b> Phase 1 is read-only. Phase 2 is compute-only, paid on Committed ARR. Phase 3 cutover is anchored to the <b>FY boundary + quota-setting cycle</b>. Zero mid-year changes to paid compensation.
+        </div>
+      </div>
+      <div class="qa-mini">
+        <div class="q">Accelerators, SPIFFs, draws &mdash; do I rebuild the plan?</div>
+        <div class="a">
+          <b>No.</b> cARR replaces Committed ARR as the attainment base. Accelerators, SPIFFs, draws, channel comp &mdash; all compose on top unchanged. The <b>mechanics stay; the denominator shifts</b>.
+        </div>
+      </div>
     </div>
 
-    <div class="pillar">
-      <div class="step">02 &middot; AI-assisted drafting, human judgment</div>
-      <h4>Speed from the assistant, safety from review.</h4>
-      <p>
-        Approximately 70% of boilerplate &mdash; SQL scaffolds, test assertions, schema documentation &mdash; was drafted by the assistant. The material errors were caught by humans running the code against real sandboxes and reading failing evals.
-      </p>
-      <div class="caught">
-        <b>D09:</b> An assistant-generated MONTH-partitioned BQ schema interacted with the sandbox&rsquo;s 60-day expiration policy, silently evicting 77% of rows on load. Caught at integration, not unit test.
-      </div>
-      <div class="caught">
-        <b>D12&rarr;D12b:</b> Version 0.5 of the formula produced a uniform HealthScore haircut for every new logo. A dedicated new-logo eval failed. The v0.6 fix added a four-parameter segment-aware ramp blend; v0.7 supersedes it with a single-line pre-signal trust rule &mdash; fewer knobs, same fairness guarantee, the right direction for a pivot.
-      </div>
-      <p style="margin-top: 10px; font-size: 12.5px; color: var(--ink-3);">
-        Commit-level provenance is preserved: every commit carries a <code style="font-size:11px;">Co-Authored-By</code> trailer identifying the assistant and the model.
-      </p>
-    </div>
+    <div>
+      <div class="rep-stmt">
+        <div class="rh">
+          <span>Rep statement &middot; sample</span>
+          <span class="right">Q2 FY26</span>
+        </div>
 
-    <div class="pillar">
-      <div class="step">03 &middot; The AI layer as a product surface</div>
-      <h4>Ask cARR &mdash; a bounded NL query layer.</h4>
-      <p>
-        The natural-language query layer is not a thin wrapper around a model. It is a five-stage pipeline, each stage independently testable:
-      </p>
-      <ul>
-        <li><b>Retriever</b> &mdash; mart schema hint</li>
-        <li><b>Generator</b> &mdash; Claude produces a SQL candidate</li>
-        <li><b>Verifier</b> &mdash; local EXPLAIN dry-run prior to execution</li>
-        <li><b>Narrator</b> &mdash; second-pass summary of the result set</li>
-        <li><b>Refusal policy</b> &mdash; PII, forecasting, cross-rep comp refused explicitly</li>
-      </ul>
-      <p style="margin-top: 10px;">
-        The generated SQL is shown alongside every answer. The pipeline is the system of record; the model is a query interface.
+        <div class="kv"><span class="k">Account</span><span class="v">ACME CORP</span></div>
+        <div class="kv"><span class="k">Rep</span><span class="v">Sarah Chen</span></div>
+        <div class="kv"><span class="k">Committed ARR</span><span class="v">$240,000</span></div>
+        <div class="kv"><span class="k">cARR</span><span class="v">$120,000</span></div>
+        <div class="kv"><span class="k">HealthScore</span><span class="v flag">0.50</span></div>
+
+        <hr/>
+
+        <div class="sec">Why 0.60 &mdash; the specific rule</div>
+        <div class="line"><span class="k">rule_applied</span><span class="v warn">spike_drop_modifier &times; 0.50</span></div>
+        <div class="line"><span class="k">M&#8321; usage share</span><span class="v">78%&nbsp;&nbsp;(threshold 70%)</span></div>
+        <div class="line"><span class="k">contract_age</span><span class="v">142 days&nbsp;&nbsp;(threshold 90)</span></div>
+        <div class="line"><span class="k">evidence_rows</span><span class="v">daily_usage_logs #1742&ndash;2081</span></div>
+
+        <div class="ask-hint">
+          <span class="k">Dispute path</span>
+          <span>&ldquo;why is Acme spike-drop?&rdquo; &rarr; /ask-carr</span>
+        </div>
+      </div>
+      <p style="margin-top: 12px; font-size: 12.5px; color: var(--ink-3); line-height: 1.45;">
+        <b style="color: var(--ink);">Rep-readability is a product feature, not a promise.</b> Every HealthScore below 1.00 ships with the rule, the thresholds it crossed, and the row-level evidence a rep can pull up in one click. No black-box line on the comp statement.
       </p>
     </div>
   </div>
 
   <div class="ftr">
-    <span>Spec-driven &middot; AI-assisted &middot; human-reviewed at every merge</span>
+    <span>Plan mechanics unchanged &middot; cARR replaces Committed ARR as the attainment base &middot; rollout in spec 08</span>
     <span class="pg">5 / 6</span>
   </div>
 </section>
 
 <!-- ============================================================================
-     SLIDE 6 — Recommendation
+     SLIDE 6 — Rollout + Ask
      ============================================================================ -->
 <section class="slide s6">
   <div class="hdr">
-    <span class="brand">cARR &middot; Executive Proposal</span>
-    <span>Recommendation</span>
+    <span class="brand">cARR &middot; Proposal for the CFO and VP Sales</span>
+    <span>Rollout &amp; Ask</span>
   </div>
   <div class="rule-top"></div>
 
-  <div style="margin-top: 0.28in;">
-    <div class="eyebrow">Align the measurement system with the pricing system &mdash; in phases</div>
-    <h1 class="slide-title">A three-phase rollout with explicit gates.</h1>
-    <p class="subhead">
-      No phase commits additional compensation liability until the previous phase has produced clean data for one full cycle. T5 Transition fidelity and T4 Comp safety are stop-the-line gates at every phase. Rollback at any stage is a single decision, supported by the pipeline.
-    </p>
+  <div style="margin-top: 0.45in;">
+    <div class="eyebrow">Rollout</div>
+    <h1 class="slide-title">Three phases. Business gates. One decision today.</h1>
   </div>
 
   <div class="phases">
     <div class="phase">
       <div class="n">PHASE 1</div>
-      <div class="when" style="margin-top: 8px;">This quarter</div>
+      <div class="when">This quarter</div>
       <h4>Publish alongside.</h4>
-      <p>
-        cARR joins Committed ARR on the executive dashboard as a second read of the book &mdash; the consumption-era complement to the seat-era anchor. Read-only. No compensation impact. Field leaders and reps see both figures side-by-side for one full review cycle.
-      </p>
-      <p style="margin-top: 10px;"><b style="color: var(--good);">Gate to Phase 2:</b> all T4 and T5 evals green for 90 days; pivot failure modes visibly surfacing.</p>
+      <div class="tag">
+        cARR appears on the exec and rep dashboards next to Committed ARR. <b>Read-only.</b> No comp impact. One full review cycle for reps and managers to read the figure.
+      </div>
+      <div class="gate">
+        <b>Gate to Phase 2:</b> reps and managers can read the figure &middot; dispute rate within target &middot; CFO + VPS sign-off.
+      </div>
     </div>
 
     <div class="phase">
       <div class="n">PHASE 2</div>
-      <div class="when" style="margin-top: 8px;">Next quarter</div>
+      <div class="when">Next FY &mdash; shadow</div>
       <h4>Shadow comp.</h4>
-      <p>
-        Compensation is dual-computed monthly. Both figures appear on the rep statement. <em>Comp is still paid on Committed ARR.</em> The objective is to surface the divergence on specific accounts and have reps learn to read the five pivot failure modes before a dollar of comp moves.
-      </p>
-      <p style="margin-top: 10px;"><b style="color: var(--good);">Gate to Phase 3:</b> dual-comp delta within the pre-agreed band, no T4/T5 failure, VPS and CFO sign-off.</p>
+      <div class="tag">
+        Dual-computed monthly. Both figures on the rep statement. <b>Comp still paid on Committed ARR.</b> Per-rep delta published without being acted on; top-rep attrition risk quantified.
+      </div>
+      <div class="gate">
+        <b>Gate to Phase 3:</b> dual-comp delta within pre-agreed band &middot; no comp-safety test failure &middot; CFO + VPS sign-off.
+      </div>
     </div>
 
     <div class="phase">
       <div class="n">PHASE 3</div>
-      <div class="when" style="margin-top: 8px;">Q+2</div>
-      <h4>Cutover with automated rollback.</h4>
-      <p>
-        cARR becomes the driver of variable compensation &mdash; the measurement system now aligned with the consumption-era pricing system. Committed ARR continues to report to the board unchanged. Automated rollback to Committed-based comp if drift exceeds 5% or any T4/T5 eval fails &mdash; executed by the pipeline, without a manual migration.
-      </p>
-      <p style="margin-top: 10px;"><b style="color: var(--good);">Safety net:</b> one-command revert; no data migration required.</p>
+      <div class="when">FY boundary</div>
+      <h4>Cutover, with rollback.</h4>
+      <div class="tag">
+        cARR drives variable comp. <b>Committed ARR continues rolling up to the board unchanged.</b> Quota and OTE set against cARR at the start of FY.
+      </div>
+      <div class="gate">
+        <b>Safety net:</b> automated rollback to Committed-based comp if drift exceeds 5% or any comp-safety test fails. One decision &mdash; no data migration.
+      </div>
     </div>
   </div>
 
   <div class="ask">
-    <h3>Recommendation &mdash; three decisions from this review</h3>
+    <h3>Three decisions from today's meeting</h3>
     <ol>
-      <li><b>Approve Phase 1</b> &mdash; publish cARR alongside Committed ARR this quarter; make the five pivot failure modes visible before the comp plan is touched.</li>
-      <li><b>Name a VPS delegate and a CFO delegate</b> to the working group &mdash; one point of contact each; co-own the T5 threshold review every quarter.</li>
-      <li><b>In-principle approval for shadow comp</b> &mdash; contingent on Phase 1 gates being met; the pricing pivot timeline should not race ahead of the measurement pivot.</li>
+      <li><b>Approve Phase 1</b> &mdash; publish cARR alongside Committed ARR on the exec and rep dashboards this quarter. Read-only, no comp impact.</li>
+      <li><b>Name a CFO delegate and a VPS delegate</b> &mdash; co-owners of the quarterly threshold review that gates each phase.</li>
+      <li><b>In-principle approval for Phase 2 shadow comp</b> &mdash; contingent on Phase 1 gates being met; protects the measurement pivot from falling behind the pricing pivot.</li>
     </ol>
   </div>
 
   <div class="ftr">
-    <span>Rollout plan &mdash; spec 08 &middot; Rollback gates &mdash; spec 08 §4 &middot; T5 gate &mdash; spec 06 §7b.3</span>
+    <span>Rollout &mdash; spec 08 &middot; Rollback &mdash; spec 08 &sect;4 &middot; Audit &amp; access &mdash; spec 09</span>
     <span class="pg">6 / 6</span>
   </div>
-  <div class="demo-link">gtm-analytics.streamlit.app</div>
 </section>
 
 </body>
