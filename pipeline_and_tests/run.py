@@ -69,32 +69,34 @@ MODEL_ORDER = [
 
 # Every pipeline-produced table is exported to parquet so that
 # dq/run_dq.py, evals/run_evals.py, and the dashboard can read locally
-# without hitting BQ on every question. The archetype bridge view is
-# exported too so the dashboard's assignment-spec compliance view reads
-# from BQ-as-source-of-truth (via its parquet snapshot) instead of the
-# local generator CSV.
+# without hitting BQ on every question.
 EXPORT_TABLES = [
     "stg_sales_reps", "stg_accounts", "stg_contracts", "stg_daily_usage_logs",
     "int_orphan_usage", "int_account_active_contracts", "int_usage_rolled",
     "metric_healthscore", "metric_carr",
     "mart_carr_current", "mart_carr_by_rep", "mart_carr_by_region", "mart_dq_summary",
-    "raw_account_archetypes",
 ]
 
 # BQ upload lands CSVs under these (unprefixed) table names. The SQL
 # models reference `raw_*`, so we create thin views at the top of the
-# run to bridge the naming without mutating the source dataset.
-# `raw_account_archetypes` is synthetic-data provenance — not consumed by
-# any metric model, but exposed as a warehouse view so the dashboard can
-# read the archetype labels through the same BQ-first path as every
-# other mart.
+# run to bridge the naming without mutating the source dataset. Source
+# dataset holds exactly the 4 brief-spec tables — archetype labels are
+# generator ground truth, not a warehouse table (see below).
 BQ_RAW_VIEWS = {
-    "raw_sales_reps":         "sales_reps",
-    "raw_accounts":           "accounts",
-    "raw_contracts":          "contracts",
-    "raw_daily_usage_logs":   "daily_usage_logs",
-    "raw_account_archetypes": "account_archetypes",
+    "raw_sales_reps":       "sales_reps",
+    "raw_accounts":         "accounts",
+    "raw_contracts":        "contracts",
+    "raw_daily_usage_logs": "daily_usage_logs",
 }
+
+# Archetype labels are generator provenance / eval ground truth, not a
+# source-of-truth warehouse table, so they never enter BQ. To keep the
+# dashboard's BQ-parquet-first read path consistent across every table
+# it shows, we snapshot the generator's `_account_archetypes.csv` into
+# `pipeline_and_tests/data/raw_account_archetypes.parquet` at the end
+# of the run. Dashboard and evals read from that parquet.
+ARCHETYPE_CSV_SRC = REPO_ROOT / "data_generation" / "output" / "_account_archetypes.csv"
+ARCHETYPE_PARQUET_OUT = DATA_OUT / "raw_account_archetypes.parquet"
 
 
 def _render(sql_path: Path) -> str:
@@ -205,6 +207,17 @@ def main() -> None:
         parquet_path = DATA_OUT / f"{table}.parquet"
         df.to_parquet(parquet_path, index=False)
         print(f"[export]   {table:<32} rows={len(df):>6}  →  {parquet_path.name}")
+
+    # Archetype ground-truth snapshot (generator provenance, not a BQ table).
+    # Mirror the generator CSV into parquet so the dashboard and eval
+    # harness read archetype labels via the same local-parquet path they
+    # use for every other table.
+    if ARCHETYPE_CSV_SRC.exists():
+        arch = pd.read_csv(ARCHETYPE_CSV_SRC)
+        arch.to_parquet(ARCHETYPE_PARQUET_OUT, index=False)
+        print(f"[export]   {'raw_account_archetypes':<32} rows={len(arch):>6}  →  {ARCHETYPE_PARQUET_OUT.name}  (from generator CSV)")
+    else:
+        print(f"[warn]     archetype CSV missing ({ARCHETYPE_CSV_SRC}); parquet not refreshed")
 
     summary = _fetch_df(client, f"SELECT * FROM {wh_ref}.mart_dq_summary").iloc[0]
     print("\n[summary]")

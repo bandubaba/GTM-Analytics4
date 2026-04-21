@@ -1,6 +1,13 @@
 """
 Upload the four synthetic CSVs under ./output/ to a BigQuery sandbox dataset.
 
+The source dataset (`gtm_analytics`) holds **exactly** the four tables the
+assignment specifies — sales_reps, accounts, contracts, daily_usage_logs —
+and nothing else. The archetype label file written alongside them
+(`_account_archetypes.csv`) is generator provenance / eval ground truth,
+not a source-of-truth table; it stays on local disk and is consumed
+directly by the eval harness and dashboard.
+
 Env vars:
   GOOGLE_CLOUD_PROJECT   (required)  — e.g. my-gtm-sandbox
   BQ_DATASET             (optional)  — default: gtm_analytics
@@ -56,15 +63,6 @@ SCHEMAS: dict[str, list[bigquery.SchemaField]] = {
         bigquery.SchemaField("account_id", "STRING", mode="NULLABLE"),
         bigquery.SchemaField("date", "DATE", mode="REQUIRED"),
         bigquery.SchemaField("compute_credits_consumed", "NUMERIC", mode="REQUIRED"),
-    ],
-    # Synthetic-data provenance: the archetype label the generator placed
-    # on each account (shelfware / spike_drop / overage / normal). Not a
-    # customer-visible table in prod — here it lives in BQ so the dashboard's
-    # assignment-spec compliance view reads from the same source of truth
-    # as every other metric.
-    "account_archetypes": [
-        bigquery.SchemaField("account_id", "STRING", mode="REQUIRED"),
-        bigquery.SchemaField("archetype",  "STRING", mode="REQUIRED"),
     ],
 }
 
@@ -157,17 +155,32 @@ def main():
     print("[1/2] Ensuring dataset ...")
     _ensure_dataset(client, dataset_id, location)
 
+    # One-time cleanup: earlier versions of this script also uploaded an
+    # `account_archetypes` table to the source dataset. The assignment
+    # specifies 4 source tables, so we now keep archetype labels as local
+    # generator provenance only. Drop the stale table if a prior run
+    # left one behind — no-op on a fresh clone.
+    legacy = bigquery.TableReference(
+        bigquery.DatasetReference(client.project, dataset_id), "account_archetypes"
+    )
+    try:
+        client.delete_table(legacy, not_found_ok=True)
+        print("  (cleaned up legacy account_archetypes table if present)")
+    except Exception as e:
+        print(f"  WARN: could not drop legacy account_archetypes: {e}")
+
     print("\n[2/2] Loading CSVs ...")
-    # Upload order: the 4 brief-spec tables first, then the archetype
-    # provenance table. Naming quirk: the generator writes the archetype
-    # file as `_account_archetypes.csv` (leading underscore to mark it as
-    # a side-artifact on local disk), but the BQ table is `account_archetypes`.
+    # The 4 brief-spec tables — and only these — land in BQ. The
+    # generator also writes `_account_archetypes.csv` in the same output
+    # directory, but that file is eval ground truth (which archetype the
+    # generator injected per account), not a warehouse source table, so
+    # it stays on local disk and is consumed directly by the eval harness
+    # and dashboard.
     order = [
-        ("sales_reps",         "sales_reps.csv"),
-        ("accounts",           "accounts.csv"),
-        ("contracts",          "contracts.csv"),
-        ("daily_usage_logs",   "daily_usage_logs.csv"),
-        ("account_archetypes", "_account_archetypes.csv"),
+        ("sales_reps",       "sales_reps.csv"),
+        ("accounts",         "accounts.csv"),
+        ("contracts",        "contracts.csv"),
+        ("daily_usage_logs", "daily_usage_logs.csv"),
     ]
     for table_name, filename in order:
         csv = OUT_DIR / filename

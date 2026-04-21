@@ -61,12 +61,13 @@ def _load_archetypes_impl(source_path: str, source_mtime: float) -> pd.DataFrame
 def load_archetypes() -> pd.DataFrame:
     """Return per-account injected archetype label (what the generator placed).
 
-    Source of truth is BigQuery (`gtm_analytics.account_archetypes`, bridged
-    into `gtm_metric.raw_account_archetypes`). The pipeline exports that
-    bridge view to parquet on every run, so the dashboard reads the BQ
-    snapshot the same way it reads every other mart — no dependency on
-    the local generator CSV. Falls back to the generator CSV only when the
-    pipeline hasn't been run yet (bare-clone local dev).
+    Archetype labels are generator provenance / eval ground truth — not a
+    warehouse source table. The brief specifies 4 source tables and only
+    those 4 sit in `gtm_analytics`. The pipeline snapshots the generator
+    CSV into `pipeline_and_tests/data/raw_account_archetypes.parquet` on
+    every run, and the dashboard reads from that parquet the same way it
+    reads every other mart. Falls back to the generator CSV directly for
+    bare-clone runs where the pipeline hasn't been executed yet.
 
     Cache invalidates when the underlying file's mtime changes, so a
     regen / pipeline rerun is picked up on the next Streamlit rerun
