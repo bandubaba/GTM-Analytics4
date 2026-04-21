@@ -89,6 +89,41 @@ def _money(x: float) -> str:
     return f"${x:,.0f}"
 
 
+def _fmt_rows(rows: pd.DataFrame):
+    """Apply sensible per-column display formatting to an arbitrary result frame.
+
+    Used by the Ask cARR view where the column set is LLM-determined and we
+    can't know it in advance. Money columns get "$1,234,567"; HealthScores
+    get 3 decimals; utilization gets a percent; integer-ish counts get commas.
+    Returns the original DataFrame on any failure (never breaks the view).
+    """
+    if rows is None or rows.empty:
+        return rows
+    fmt: dict = {}
+    for col in rows.columns:
+        c = str(col).lower()
+        if (
+            c in {"committed_arr", "carr", "implied_adj", "revenue", "delta", "total_carr", "total_committed_arr"}
+            or c.endswith("_arr")
+            or c.endswith("_carr")
+        ):
+            fmt[col] = "${:,.0f}"
+        elif (
+            c in {"healthscore", "healthscore_steady", "base_score", "modifier", "ramp_w", "weighted_healthscore"}
+            or c.endswith("_healthscore")
+            or c.endswith("_score")
+        ):
+            fmt[col] = "{:.3f}"
+        elif c in {"utilization_u", "utilization", "m1_share"} or c.endswith("_pct") or c.endswith("_share"):
+            fmt[col] = "{:.1%}"
+        elif c.startswith("n_") or c in {"contract_age_days", "count"}:
+            fmt[col] = "{:,.0f}"
+    try:
+        return rows.style.format(fmt, na_rep="—")
+    except Exception:
+        return rows
+
+
 def view_executive():
     st.title("Executive view")
     st.caption(
@@ -320,7 +355,7 @@ def view_ask():
             st.info(result.narration)
             if not result.rows.empty:
                 st.markdown("#### Rows")
-                st.dataframe(result.rows, use_container_width=True)
+                st.dataframe(_fmt_rows(result.rows), use_container_width=True, hide_index=True)
         st.markdown("#### Generated SQL")
         st.code(result.sql, language="sql")
 
