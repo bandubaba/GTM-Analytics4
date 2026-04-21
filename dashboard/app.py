@@ -64,7 +64,7 @@ dq = data.load_dq_summary()
 # ---------------------------------------------------------------------------
 
 st.sidebar.title("cARR — GTM North Star")
-st.sidebar.caption(f"as of **{dq.as_of_date}**  ·  spec 03 v0.6")
+st.sidebar.caption(f"as of **{dq.as_of_date}**  ·  spec 03 v0.7")
 st.sidebar.markdown("---")
 
 view = st.sidebar.radio(
@@ -76,7 +76,8 @@ view = st.sidebar.radio(
 st.sidebar.markdown("---")
 st.sidebar.caption(
     "cARR = Committed_ARR × HealthScore\n\n"
-    "HealthScore ∈ [0.40, 1.30], ramp-blended for new contracts (D12)."
+    "HealthScore ∈ [0.40, 1.30]. Pre-signal trust: new logos with no usage "
+    "fall through to base = 1.00 (D12b)."
 )
 st.sidebar.caption(f"LLM mode: **{'ON' if os.environ.get('ANTHROPIC_API_KEY') else 'OFF (offline templates)'}**")
 
@@ -87,6 +88,23 @@ st.sidebar.caption(f"LLM mode: **{'ON' if os.environ.get('ANTHROPIC_API_KEY') el
 
 def _money(x: float) -> str:
     return f"${x:,.0f}"
+
+
+# Friendly display names for the mart's SQL band identifiers. Kept at the
+# edge of the dashboard (not in SQL) so the warehouse still uses snake_case
+# for joins / filters — the UI renders these. Labels mirror the brief's
+# five anomaly names so readers see consistent wording everywhere.
+_BAND_LABEL = {
+    "spike_drop":        "Spike & Drop",
+    "at_risk_shelfware": "Shelfware",
+    "overage":           "Consistent Overages",
+    "expansion":         "Mid-Year Expansions",
+    "healthy":           "Healthy",
+}
+
+
+def _band_display(b: str) -> str:
+    return _BAND_LABEL.get(b, b)
 
 
 def _fmt_rows(rows: pd.DataFrame):
@@ -169,14 +187,9 @@ def view_executive():
         "committed_arr", "pct_committed",
         "carr", "pct_carr",
     ]]
+    # UI-only relabel — all downstream filters already ran on snake_case.
+    band_counts["band"] = band_counts["band"].map(_band_display)
 
-    colors = {
-        "healthy": "#2ecc71",
-        "expansion": "#1abc9c",
-        "overage": "#16a085",
-        "spike_drop": "#e67e22",
-        "at_risk_shelfware": "#e74c3c",
-    }
     fig2 = px.bar(
         band_counts,
         x="band", y=["committed_arr", "carr"],
@@ -207,17 +220,18 @@ The mart exposes **five output bands** — four mapped 1:1 to the brief's
 non-orphan anomalies, plus `healthy` as the baseline.
 
 **Mapped to the brief's anomalies:**
-- **at_risk_shelfware** — HealthScore ≤ 0.55. Covers *shelfware*.
-- **spike_drop** — ≥ 70% of trailing-90d usage in month 1 and contract
-  age ≥ 90 days. Covers *spike-and-drop*.
-- **overage** — utilization > 1.10 × included. Covers *consistent
-  overage*.
-- **expansion** — ≥ 2 overlapping contracts and utilization > 1.0.
-  Covers *mid-year expansion*.
+- **Shelfware** (`at_risk_shelfware`) — HealthScore ≤ 0.55. Covers
+  *shelfware*.
+- **Spike & Drop** (`spike_drop`) — ≥ 70% of trailing-90d usage in month 1
+  and contract age ≥ 90 days. Covers *spike-and-drop*.
+- **Consistent Overages** (`overage`) — utilization > 1.10 × included.
+  Covers *consistent overage*.
+- **Mid-Year Expansions** (`expansion`) — ≥ 2 overlapping contracts and
+  utilization > 1.0. Covers *mid-year expansion*.
 
 **Baseline:**
-- **healthy** — everything else. The residual "no anomaly flagged"
-  bucket. Accounts here have no archetype pattern tripping.
+- **Healthy** (`healthy`) — everything else. The residual "no anomaly
+  flagged" bucket. Accounts here have no archetype pattern tripping.
 
 Orphan / rogue usage (the brief's 5th anomaly) is excluded upstream
 via `int_orphan_usage` and never reaches this band classifier —
@@ -387,6 +401,7 @@ def view_comp_impact():
     band_flow["delta"] = band_flow.carr - band_flow.committed_arr
     band_flow["comp_delta"] = rate * band_flow["delta"]
     band_flow = band_flow.sort_values("delta")
+    band_flow["band"] = band_flow["band"].map(_band_display)
 
     fig_band = px.bar(
         band_flow,
@@ -478,6 +493,7 @@ def view_comp_impact():
     rep_bands["delta"] = rep_bands.carr - rep_bands.committed_arr
     rep_bands["comp_delta"] = rate * rep_bands["delta"]
     rep_bands = rep_bands.sort_values("delta")
+    rep_bands["band"] = rep_bands["band"].map(_band_display)
 
     st.dataframe(
         rep_bands.rename(columns={"comp_delta": f"comp_Δ_@{rate_pct:.1f}%",
@@ -532,7 +548,7 @@ def view_account_drill():
         "Account",
         ordered.account_id.tolist(),
         index=0,
-        format_func=lambda aid: f"{aid}  ·  {ordered.loc[ordered.account_id == aid, 'band'].iloc[0]}  ·  ${ordered.loc[ordered.account_id == aid, 'committed_arr'].iloc[0]:,.0f}",
+        format_func=lambda aid: f"{aid}  ·  {_band_display(ordered.loc[ordered.account_id == aid, 'band'].iloc[0])}  ·  ${ordered.loc[ordered.account_id == aid, 'committed_arr'].iloc[0]:,.0f}",
     )
     row = df[df.account_id == pick].iloc[0]
 
@@ -541,7 +557,7 @@ def view_account_drill():
     c2.metric("cARR", _money(row.carr))
     c3.metric("HealthScore", f"{row.healthscore:.2f}")
     c4.metric("Utilization U", f"{row.utilization_u:.0%}" if pd.notna(row.utilization_u) else "—")
-    c5.metric("Band", row.band)
+    c5.metric("Band", _band_display(row.band))
 
     st.markdown("### Narrator")
     st.info(narrator.narrate(row))
@@ -588,7 +604,8 @@ def view_dq():
     st.markdown("### Band mix")
     st.dataframe(
         pd.DataFrame({
-            "band": ["at_risk_shelfware", "spike_drop", "expansion", "overage", "healthy"],
+            "band": [_band_display(b) for b in
+                     ["at_risk_shelfware", "spike_drop", "expansion", "overage", "healthy"]],
             "count": [dq.n_shelfware, dq.n_spike_drop, dq.n_expansion, dq.n_overage, dq.n_healthy],
         }),
         hide_index=True,
