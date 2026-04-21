@@ -15,7 +15,7 @@ pipeline_and_tests/
 ├── sql/
 │   ├── staging/                4 typed mirrors of the raw CSVs
 │   ├── intermediate/           orphan split (D05), active-contract aggregation
-│   │                           (D04/D12), 90-day usage roll
+│   │                           (D04/D12b), 90-day usage roll
 │   ├── metric/                 HealthScore (v0.7 single formula) and cARR
 │   └── mart/                   4 presentation tables for the dashboard
 ├── dq/
