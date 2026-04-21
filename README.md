@@ -122,14 +122,21 @@ pipeline outputs in `gtm_metric`):
 |---|---:|
 | Accounts in metric | 1,000 |
 | Committed ARR (sum) | $133,203,215 |
-| cARR (sum) | $112,715,015 |
-| Weighted HealthScore | 0.846 |
-| Healthy accounts | 612 |
-| At-risk / shelfware accounts | 196 |
+| cARR (sum) | $116,568,610 |
+| Weighted HealthScore | 0.875 |
+| Healthy accounts | 619 |
+| At-risk / shelfware accounts | 191 |
 | Overage accounts | 178 |
-| Spike-drop accounts | 8 |
+| Spike-drop accounts | 6 |
 | Expansion accounts | 6 |
 | Orphan usage excluded from metric | 350 logs ($73K credit value) |
+
+Numbers are v0.7.1 (2026-04-21 calibration — see
+[`specs/03_north_star_metric.md#appendix-d`](specs/03_north_star_metric.md)
+and [D13](specs/README.md#decision-log)). The prior v0.7.0 snapshot read
+$112.7M / 0.846 / 612 healthy; widening the healthy plateau from
+[0.80, 1.10] to [0.70, 1.10] and strengthening the spike-drop modifier
+shifted those accounts into the correct bands.
 
 Rerun produces byte-identical parquet — no `NOW()`, no random seeds in the models (D07).
 

@@ -11,6 +11,16 @@
 --   base = 1.00 via the `utilization_u IS NULL` branch, which keeps
 --   new-logo comp reasonable without a separate blend parameter.
 --
+--   v0.7.1 (2026-04-21) — calibration pass after attainment-chart review:
+--     - HEALTHY_U_MIN 0.80 → 0.70  (healthy plateau widened; normal
+--                                   under-utilization 70–95% no longer
+--                                   drags rep attainment)
+--     - SPIKE_DROP_MODIFIER 0.70 → 0.50  (stronger penalty — pattern is
+--                                         a high-churn-risk leading signal)
+--     - EXPANSION_MODIFIER  1.05 → 1.10  (mid-term expansion is a genuine
+--                                         upside, not a rounding error)
+--   See specs/03 Appendix D (v0.7.1) and specs/README.md D13.
+--
 --   Every input column is surfaced so the dashboard's "why is my score X?"
 --   widget (spec 07 §3, spec 11 §3.2) can cite them.
 

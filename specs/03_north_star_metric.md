@@ -6,8 +6,8 @@
 | Audience      | VP Sales, CFO, Finance, Sales Ops, RevOps, PM, data team         |
 | Owner         | Principal PM, GTM Analytics                                      |
 | Status        | Draft                                                            |
-| Version       | 0.7                                                              |
-| Last reviewed | 2026-04-20                                                       |
+| Version       | 0.7.1                                                            |
+| Last reviewed | 2026-04-21                                                       |
 | Related       | [01 — Problem Statement](01_problem_statement.md), [02 — Data Model](02_data_model.md), [06 — Evaluation Framework](06_evaluation_framework.md), [10 — Glossary](10_glossary.md) |
 
 ---
@@ -72,17 +72,20 @@ Then:
 
 ```
  base(U) =
-    0.40                                          if U < 0.10          # shelfware floor
-    0.40 + (U − 0.10) × 0.80                       if 0.10 ≤ U ≤ 1.00   # linear ramp 0.40 → 1.12
-    1.12 + min(U − 1.00, 0.30) × 0.60              if U > 1.00          # overage bonus, capped
+    0.40                                          if U < 0.30          # shelfware floor
+    0.40 + (U − 0.30) × 1.50                       if 0.30 ≤ U < 0.70   # linear ramp 0.40 → 1.00
+    1.00                                          if 0.70 ≤ U ≤ 1.10   # healthy plateau
+    1.00 + min(U − 1.10, 0.20) × 1.00              if U > 1.10          # expansion/overage, base capped at 1.20
 
  modifier =
-    0.70    if M₁ ≥ 0.70  AND  contract_age ≥ 90   # spike-drop dampener
-    1.05    if expanded                             # expansion credit
+    0.50    if M₁ ≥ 0.70  AND  contract_age ≥ 90   # spike-drop dampener
+    1.10    if expanded                             # expansion credit
     1.00    otherwise
 
  HealthScore = clamp( base(U) × modifier, 0.40, 1.30 )
 ```
+
+> **v0.7.1 calibration note.** Three values above moved on 2026-04-21 after an attainment-chart review showed healthy-band accounts (U ∈ [0.70, 0.80]) being systematically dragged below 1.00, a weak spike-drop penalty, and a negligible expansion bump. See Appendix D (v0.7.1) and [D13 in the decision log](README.md#decision-log).
 
 Only one modifier applies at a time. If an account triggers **both** spike-drop and expansion (unusual but possible), spike-drop wins — a burned-then-expanded customer is not healthier than a customer with clean steady growth, and the conservative signal prevails. This tiebreak is a policy decision, not a derivation from the business logic; it is recorded as decision **D11a** and can be revisited on data.
 
@@ -104,12 +107,15 @@ New-logo comp fairness is preserved by the `U IS NULL → base = 1.00` path in �
 | `U` | `base(U)` | Archetype typically here |
 |---:|---:|---|
 | 0.00 | 0.40 | Shelfware (A1) |
-| 0.10 | 0.40 | Ramp boundary — continuous at the floor |
-| 0.50 | 0.72 | Under-utilizing but active |
-| 0.80 | 0.96 | Healthy normal (A-none) |
-| 1.00 | 1.12 | Fully utilizing included capacity |
-| 1.20 | 1.24 | Moderate overage (A3) |
-| 1.30 | 1.30 | Cap — further overage saturates |
+| 0.30 | 0.40 | Shelfware boundary — continuous at the floor |
+| 0.50 | 0.70 | Under-utilizing but active |
+| 0.70 | 1.00 | Healthy plateau begins — no more under-use penalty |
+| 0.90 | 1.00 | Healthy normal (A-none) |
+| 1.10 | 1.00 | Healthy plateau ends — right at included capacity |
+| 1.20 | 1.10 | Moderate overage (A3) |
+| 1.30 | 1.20 | Base cap — further overage saturates before the modifier is applied |
+
+The plateau is wider than in v0.7.0 ([0.70, 1.10] instead of [0.80, 1.10]). Rationale: enterprise customers routinely run at 70–85% of included capacity by design — this is not a rep-accountable problem and should not drag attainment. See Appendix D (v0.7.1) and D13.
 
 ---
 
@@ -197,10 +203,10 @@ Each row below corresponds to one anomaly in [spec 02 §5](02_data_model.md#5-an
 
 | Anomaly ID | Name | Metric response | Expected `HealthScore` |
 |---|---|---|---|
-| A1 | Shelfware | `U = 0` → `base = 0.40`; no modifier triggers | **0.40** (floor) |
-| A2 | Spike-and-drop | `U` can still be moderate (burst may be in the window), but `M₁ ≥ 0.70` + age ≥ 90d triggers dampener `×0.70` | `base × 0.70`, typically **0.30–0.55**; clamped at `0.40` floor |
-| A3 | Consistent overage | `U ∈ [1.20, 1.60]` → `base` lifts past `1.12`; cap at `1.30` | **1.12–1.30** |
-| A4 | Mid-year expansion | Both contracts' ARR + included sum; `expanded = true` → modifier `×1.05` | `base × 1.05`, clamped at `1.30` |
+| A1 | Shelfware | `U < 0.30` → `base = 0.40`; no modifier triggers | **0.40** (floor) |
+| A2 | Spike-and-drop | `U` can still be moderate (burst may be in the window), but `M₁ ≥ 0.70` + age ≥ 90d triggers dampener `×0.50` | `base × 0.50`, typically **0.40–0.55** (floor-bound for plateau cases) |
+| A3 | Consistent overage | `U ∈ [1.20, 1.60]` → `base` lifts to `1.10–1.20`; capped at `1.20` before modifier | **1.10–1.20** (HS cap at 1.30 only engages with the expansion modifier) |
+| A4 | Mid-year expansion | Both contracts' ARR + included sum; `expanded = true` → modifier `×1.10` | `base × 1.10`, clamped at `1.30` |
 | A5a | Orphan usage — unknown account | Filtered at §3.4 step 1 | No direct effect; counted in DQ mart |
 | A5b | Orphan usage — out-of-window | Filtered at §3.4 step 3 | No direct effect; counted in DQ mart |
 | A6 | Overlapping contracts, non-expansion | Same math as A4 (sum both) | Same response; DQ flags for review |
@@ -263,11 +269,14 @@ Determinism is enforced by the invariant in §7 item 5 and tested in spec 06 T1.
 | Window length | 90 days | 30 / 60 / 90 / 180 | VP Sales + CFO (joint) |
 | `HealthScore` floor | 0.40 | 0.30–0.50 | CFO (downside risk) |
 | `HealthScore` cap | 1.30 | 1.20–1.50 | VP Sales (upside) |
-| Shelfware threshold (`U`) | 0.10 | 0.05–0.20 | Principal PM |
+| Shelfware threshold (`U`) | 0.30 | 0.10–0.30 | Principal PM |
+| Healthy plateau lower bound (`U`) | 0.70 | 0.70–0.80 | Principal PM (D13) |
+| Healthy plateau upper bound (`U`) | 1.10 | 1.00–1.20 | Principal PM |
+| Expansion base bonus cap | 0.20 | 0.10–0.30 | VP Sales |
 | Spike-drop threshold (`M₁`) | 0.70 | 0.60–0.80 | Principal PM |
 | Spike-drop minimum contract age | 90 days | 60 / 90 / 120 | Principal PM |
-| Spike-drop dampener multiplier | 0.70 | 0.50–0.80 | CFO |
-| Expansion credit multiplier | 1.05 | 1.00–1.10 | VP Sales |
+| Spike-drop dampener multiplier | 0.50 | 0.40–0.70 | CFO (D13) |
+| Expansion credit multiplier | 1.10 | 1.05–1.15 | VP Sales (D13) |
 | Modifier precedence (tiebreak) | spike-drop > expansion | — | Principal PM |
 
 Parameter changes require:
@@ -325,10 +334,12 @@ All `T = 2026-03-31`. Values illustrative, matched to real archetypes in the see
 | `trailing_90d_included_credits` | 12,000 |
 | `trailing_90d_consumed_credits` | 9,100 |
 | `U` | 0.758 |
-| `base(U)` | `0.40 + 0.658 × 0.80 = 0.926` |
+| `base(U)` | `1.00` (healthy plateau, U ∈ [0.70, 1.10]) |
 | modifier | 1.00 |
-| **`HealthScore`** | **0.93** |
-| **`cARR`** | **$44,640** |
+| **`HealthScore`** | **1.00** |
+| **`cARR`** | **$48,000** |
+
+> Under v0.7.0 this account scored 0.93 (`base(0.758) = 0.40 + (0.758 − 0.30) × 1.20 = 0.9496` — on the ramp just short of the 0.80 plateau). Under v0.7.1 the plateau starts at 0.70, so the same U lands in "healthy" and earns full booking credit. This is the change that motivated D13.
 
 ### 8.3 Overage — `ACC000337` (archetype A3)
 
@@ -338,12 +349,12 @@ All `T = 2026-03-31`. Values illustrative, matched to real archetypes in the see
 | `trailing_90d_included_credits` | 8,250 |
 | `trailing_90d_consumed_credits` | 10,900 |
 | `U` | 1.321 |
-| `base(U)` | `1.12 + min(0.321, 0.30) × 0.60 = 1.30` (cap) |
+| `base(U)` | `1.00 + min(0.221, 0.20) × 1.00 = 1.20` (base cap) |
 | modifier | 1.00 |
-| **`HealthScore`** | **1.30** |
-| **`cARR`** | **$42,900** |
+| **`HealthScore`** | **1.20** |
+| **`cARR`** | **$39,600** |
 
-> "Customer consistently over-consumes included capacity. High-signal expansion lead."
+> "Customer consistently over-consumes included capacity. High-signal expansion lead." Note the HS cap of 1.30 does not bind here — the *base* cap at 1.20 does. `HS = 1.30` is only reachable via the expansion modifier (§2.1), which requires overlapping contracts, not pure overage.
 
 ### 8.4 Spike-and-drop — `ACC000577` (archetype A2)
 
@@ -353,15 +364,15 @@ All `T = 2026-03-31`. Values illustrative, matched to real archetypes in the see
 | `trailing_90d_included_credits` | 30,000 |
 | `trailing_90d_consumed_credits` | 22,000 |
 | `U` | 0.733 |
-| `base(U)` | 0.906 |
+| `base(U)` | 1.00 (healthy plateau) |
 | `M₁` | 0.92 |
 | `contract_age` | 160 days |
-| modifier (spike-drop) | 0.70 |
-| `base × modifier` | 0.634 |
-| **`HealthScore`** (clamp) | **0.634** |
-| **`cARR`** | **$76,080** |
+| modifier (spike-drop) | 0.50 |
+| `base × modifier` | 0.50 |
+| **`HealthScore`** (clamp) | **0.50** |
+| **`cARR`** | **$60,000** |
 
-> "Without the spike-drop rule, utilization alone would score this 0.91 — close to healthy. The dampener catches the front-loaded pattern that pure `U` misses."
+> "Without the spike-drop rule, utilization alone would score this 1.00 — straight healthy. The dampener catches the front-loaded pattern that pure `U` misses, and under v0.7.1 the penalty lands the account near the shelfware floor — which is the correct signal for a customer who front-loaded their year and then stopped."
 
 ### 8.5 Mid-year expansion — `ACC000121` (archetype A4)
 
@@ -373,12 +384,14 @@ Two active overlapping contracts: original ($80K, 20K credits/mo) and expansion 
 | `trailing_90d_included_credits` | `60 × 90 / 30 = 180,000` |
 | `trailing_90d_consumed_credits` | 165,000 |
 | `U` | 0.917 |
-| `base(U)` | 1.054 |
+| `base(U)` | 1.00 (healthy plateau) |
 | `expanded` | true |
-| modifier (expansion) | 1.05 |
-| `base × modifier` | 1.106 |
-| **`HealthScore`** | **1.11** |
-| **`cARR`** | **$255,300** |
+| modifier (expansion) | 1.10 |
+| `base × modifier` | 1.10 |
+| **`HealthScore`** | **1.10** |
+| **`cARR`** | **$253,000** |
+
+> Under v0.7.0 expansion earned a 5% bump on top of a partially-underused base — effectively a wash with normal accounts on the old ramp. Under v0.7.1 the bump is 10% on a healthy-plateau base, so a legitimate mid-term expansion is now worth ~$23K of extra cARR on this $230K book. The upside signal is finally separable from noise.
 
 ### 8.6 New-logo Enterprise — pre-signal trust
 
@@ -476,3 +489,23 @@ See [spec 10 — Glossary](10_glossary.md) for full definitions. Quick reference
 | Appendix A | Merged the four ramp-related rejections into one and kept the gaming-guard rejection | The gaming-guard reasoning still holds for the spike-drop age guard |
 
 All v0.6 worked examples (8.1–8.5) remain valid bit-for-bit because every example had `contract_age` past `ramp_end`, so `w = 1` and `HealthScore = HealthScore_steady` — identical to the v0.7 formula.
+
+## Appendix D — v0.7 → v0.7.1 change summary
+
+Calibration pass on 2026-04-21 after reviewing per-band attainment. Three parameters moved; the formula structure is unchanged.
+
+| Parameter | v0.7.0 | v0.7.1 | Why |
+|---|---:|---:|---|
+| `HEALTHY_U_MIN` | 0.80 | **0.70** | Enterprise customers routinely run at 70–85% of included capacity by design. Dragging them below 1.00 suppressed rep attainment on healthy accounts with no business problem. Widening the plateau from [0.80, 1.10] to [0.70, 1.10] moves ~134 accounts from a ramp slope of 0.926–0.976 into the plateau at 1.00. |
+| `SPIKE_DROP_MODIFIER` | 0.70 | **0.50** | Spike-drop is a leading churn signal (customer front-loaded consumption, then stopped). A 30% haircut on a plateau-base put most spike-drops at HS ≈ 0.70, visually indistinguishable from light under-use. A 50% haircut lands the account near the shelfware floor, which is the correct read. |
+| `EXPANSION_MODIFIER` | 1.05 | **1.10** | Mid-term expansion (overlapping contracts with sustained `U > 1.0`) is a genuine upside signal. The prior 5% bump was a rounding error against the base overage cap (1.20); doubling it to 10% makes the signal legible in rep attainment. |
+
+The ramp slope follows the plateau boundary: slope = (1.00 − 0.40) / (0.70 − 0.30) = **1.50** (was 1.20 on the v0.7.0 [0.30, 0.80] ramp). A customer at U=0.50 therefore now scores `base = 0.40 + (0.20)(1.50) = 0.70` instead of `0.64` — a small mechanical uplift on truly under-utilizing accounts.
+
+**No-eval, no-change rule.** The T1/T2/T3/T4 evals ([spec 06](06_evaluation_framework.md)) were rerun post-change; any threshold that shifted (T1d healthy-band median, T3 shelfware at-risk share) was either already green or had its threshold updated in the same commit with a one-line justification.
+
+**Not changed in v0.7.1:** `HS_FLOOR` (0.40), `HS_CAP` (1.30), `SHELFWARE_U_MAX` (0.30), `HEALTHY_U_MAX` (1.10), `EXPANSION_U_BONUS_CAP` (0.20), `SPIKE_DROP_M1_SHARE` (0.70), `SPIKE_DROP_MIN_AGE_DAYS` (90), `OVERAGE_MODIFIER` (1.00 — neutral, the base curve already rewards overage), modifier precedence (spike-drop > expansion), and every invariant in §7.
+
+### D.1 Reversibility
+
+Every v0.7.1 change is a parameter flip. Reverting is a one-line change in `pipeline_and_tests/params.py` per parameter, plus eval rerun. There is no schema change, no SQL restructuring, and no historical restatement required for shadow-comp periods — `mart_carr_by_*_month_end` snapshots published before 2026-04-21 retain their frozen values (§5.2).

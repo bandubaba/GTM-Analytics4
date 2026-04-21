@@ -29,24 +29,36 @@ HS_CAP: float = 1.30
 # U is utilization = actual_credits_90d / expected_credits_90d
 # where expected = included_monthly_credits × 3.
 #
-# Bands:
+# Bands (v0.7.1 — healthy plateau widened from [0.80, 1.10] to [0.70, 1.10]):
 #   U < 0.30   → shelfware band         → base = 0.40
-#   0.30 ≤ U < 0.80 → underuse           → base = 0.40 + (U − 0.30) × 1.20  (linear to 1.00)
-#   0.80 ≤ U ≤ 1.10 → healthy band       → base = 1.00
+#   0.30 ≤ U < 0.70 → underuse           → base = 0.40 + (U − 0.30) × 1.50  (linear to 1.00)
+#   0.70 ≤ U ≤ 1.10 → healthy band       → base = 1.00
 #   U > 1.10   → expansion/overage band  → base = 1.00 + min(U − 1.10, 0.20) × 1.00  (up to 1.20)
+#
+# Why the wider plateau: normal under-utilization (70–95%) is not a rep-
+# accountable problem — many enterprise customers run at 80% of included
+# credits by design. Penalizing them suppressed attainment on accounts
+# that weren't actually at risk. See specs/03 Appendix D (v0.7.1).
 SHELFWARE_U_MAX: float = 0.30
-HEALTHY_U_MIN: float = 0.80
+HEALTHY_U_MIN: float = 0.70
 HEALTHY_U_MAX: float = 1.10
 EXPANSION_U_BONUS_CAP: float = 0.20  # caps expansion base at 1.20 before modifier
 
 # -------- modifier rules (spec 03 §3) --------
 # Spike-drop: month-1 share ≥ SPIKE_DROP_M1_SHARE of trailing-90d, AND contract_age ≥ SPIKE_DROP_MIN_AGE
+# v0.7.1 — penalty strengthened from 0.70 to 0.50: the pattern is a high-
+# churn-risk leading indicator (customer front-loaded consumption then
+# stopped), and the prior 30% haircut under-weighted it relative to the
+# shelfware floor. See specs/03 Appendix D (v0.7.1).
 SPIKE_DROP_M1_SHARE: float = 0.70
 SPIKE_DROP_MIN_AGE_DAYS: int = 90
-SPIKE_DROP_MODIFIER: float = 0.70  # multiplicative penalty
+SPIKE_DROP_MODIFIER: float = 0.50  # multiplicative penalty
 
 # Expansion: account has ≥ 2 active overlapping contracts and aggregated U > 1.0 sustained
-EXPANSION_MODIFIER: float = 1.05
+# v0.7.1 — boost raised from 1.05 to 1.10: mid-contract expansion is a
+# genuine upside signal (customer bought more during the term) and the
+# prior 5% bump was a rounding error against the overage band.
+EXPANSION_MODIFIER: float = 1.10
 
 # Overage (paying over included credits, but not runaway): small positive, capped by HS_CAP
 OVERAGE_MODIFIER: float = 1.00  # neutral — the base(U) already rewards it

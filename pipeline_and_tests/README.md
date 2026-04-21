@@ -63,17 +63,30 @@ python pipeline_and_tests/dq/run_dq.py
 python pipeline_and_tests/evals/run_evals.py
 ```
 
-Expected output on a clean run:
+Expected output on a clean run (v0.7.1 parameters):
 
 ```
 [pipeline] 13 models executed
   accounts in metric   : 1000
   Committed_ARR        : $133,203,215
-  cARR                 : $112,715,015
-  weighted HealthScore : 0.846
+  cARR                 : $116,568,610
+  weighted HealthScore : 0.875
+  at-risk / shelfware  : 191
+  spike-drop           : 6
+  expansion            : 6
+  overage              : 178
+  healthy              : 619
 [dq]       16 assertions  pass=16  block=0  warn=0
 [evals]    11 checks      pass=11  fail=0
 ```
+
+v0.7.1 moved three parameters after an attainment-chart review — see
+[`specs/03_north_star_metric.md#appendix-d`](../specs/03_north_star_metric.md)
+and [D13 in the decision log](../specs/README.md#decision-log).
+Net effect: cARR moved from $112.7M to $116.6M (+$3.9M; +2.9%) and
+weighted HS from 0.846 to 0.875 — healthy-plateau accounts no longer
+dragged below 1.00, spike-drops now visibly land at-risk, and mid-term
+expansions earn a legible 10% bump.
 
 ## Why parquet exports (not BQ round-trips)
 

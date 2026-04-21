@@ -94,7 +94,7 @@ dq = data.load_dq_summary()
 # ---------------------------------------------------------------------------
 
 st.sidebar.title("cARR — GTM North Star")
-st.sidebar.caption(f"as of **{dq.as_of_date}**  ·  spec 03 v0.7")
+st.sidebar.caption(f"as of **{dq.as_of_date}**  ·  spec 03 v0.7.1")
 st.sidebar.markdown("---")
 
 view = st.sidebar.radio(
