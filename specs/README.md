@@ -18,7 +18,7 @@ Read top to bottom if this is your first pass. The specs build on each other.
 | 03 | [`03_north_star_metric.md`](03_north_star_metric.md) | CFO, VP Sales, PM, data team | The formula, the parameters, the invariants, worked examples per archetype |
 | 04 | [`04_pipeline_architecture.md`](04_pipeline_architecture.md) | Data engineers, SRE | How data flows, refresh cadence, cost envelope, partition/cluster decisions |
 | 05 | [`05_data_quality.md`](05_data_quality.md) | Data engineers, data stewards | DQ assertion catalog, severity tiers, block-on-fail vs warn-on-fail rules |
-| 06 | [`06_evaluation_framework.md`](06_evaluation_framework.md) | PM, data science, panel reviewers | 4-tier eval framework (T1 Correctness → T4 Comp safety), pass criteria, stop-the-line consequences |
+| 06 | [`06_evaluation_framework.md`](06_evaluation_framework.md) | PM, data science, panel reviewers | 5-tier eval framework (T1 Correctness → T5 Transition fidelity), pass criteria, stop-the-line consequences |
 | 07 | [`07_dashboard_spec.md`](07_dashboard_spec.md) | Design, frontend, VPS/CFO users | Personas, views, filters, drill paths, what each audience sees first |
 | 08 | [`08_rollout_plan.md`](08_rollout_plan.md) | VPS, CFO, People Ops, RevOps | Phased adoption (reporting → shadow comp → partial tie-in → full), gates, risks, rollback |
 | 09 | [`09_access_and_audit.md`](09_access_and_audit.md) | Security, Legal, IT, Internal Audit | Comp data classification, RBAC matrix, audit trail, change management, retention |

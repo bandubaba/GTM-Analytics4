@@ -278,8 +278,8 @@ Typed, validated layer between `raw.*` and `int_*`. Splits usage into `stg_usage
 **`T` (as-of date)**
 See As-of date.
 
-**T1 / T2 / T3 / T4**
-Evaluation framework tiers. T1 Correctness, T2 Construct validity, T3 Decision utility, T4 Comp safety. [Spec 06](06_evaluation_framework.md).
+**T1 / T2 / T3 / T4 / T5**
+Evaluation framework tiers. T1 Correctness, T2 Construct validity, T3 Decision utility, T4 Comp safety, T5 Transition fidelity. T1, T4, T5 are stop-the-line (blocking); T2, T3 warn but continue. T5 added in spec 06 v0.2 to catch regressions in the five pricing-pivot failure modes. [Spec 06](06_evaluation_framework.md).
 
 **Tie-break (modifier precedence)**
 When both spike-drop and expansion modifiers could apply, spike-drop wins. Decision D11a in [spec 03 §2.1](03_north_star_metric.md#21-healthscore-definition).

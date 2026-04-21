@@ -64,7 +64,7 @@ python data_generation/generate_data.py                        # 1. seeded CSVs
 GOOGLE_CLOUD_PROJECT=<your-proj> python data_generation/upload_to_bq.py  # 2. load BQ
 GOOGLE_CLOUD_PROJECT=<your-proj> python pipeline_and_tests/run.py        # 3. 13 models → BQ + parquet
 python pipeline_and_tests/dq/run_dq.py                         # 4. 16 DQ checks
-python pipeline_and_tests/evals/run_evals.py                   # 5. 11 T1-T4 evals
+python pipeline_and_tests/evals/run_evals.py                   # 5. 16 T1-T5 evals
 ```
 
 Rerun is byte-identical (seeded generator + deterministic SQL, D07).
@@ -83,7 +83,7 @@ GTM-Analytics4/
 │   ├── 03_north_star_metric.md      v0.7 — cARR formula, renewals, invariants
 │   ├── 04_pipeline_architecture.md
 │   ├── 05_data_quality.md
-│   ├── 06_evaluation_framework.md   T1 Correctness → T4 Comp safety
+│   ├── 06_evaluation_framework.md   T1 Correctness → T5 Transition fidelity
 │   ├── 07_dashboard_spec.md
 │   ├── 08_rollout_plan.md
 │   ├── 09_access_and_audit.md
@@ -99,7 +99,7 @@ GTM-Analytics4/
 │   ├── params.py                    Parameters cite spec 03 §6
 │   ├── sql/                         13 models: staging → intermediate → metric → mart
 │   ├── dq/run_dq.py                 16 assertions (block + warn tiers)
-│   ├── evals/run_evals.py           11 checks across T1-T4
+│   ├── evals/run_evals.py           16 checks across T1-T5
 │   └── README.md
 └── dashboard/                       Streamlit prototype
     ├── app.py                       5 views: exec / reps / account drill / DQ / Ask
@@ -140,7 +140,7 @@ shifted those accounts into the correct bands.
 
 Rerun produces byte-identical parquet — no `NOW()`, no random seeds in the models (D07).
 
-All 16 DQ assertions pass. All 11 evals (T1 Correctness, T2 Construct validity, T3 Decision utility, T4 Comp safety) pass.
+All 16 DQ assertions pass. All 16 evals pass across five tiers (T1 Correctness, T2 Construct validity, T3 Decision utility, T4 Comp safety, T5 Transition fidelity). T5 is the stop-the-line tier added in spec 06 v0.2: it dollarizes each of the five pricing-pivot failure modes (shelfware / spike-drop / overage / expansion / orphans) and asserts cARR's answer diverges from a seat-based read in the expected direction and magnitude — the business-level regression test that T1 is not scoped to see.
 
 ---
 
@@ -169,8 +169,8 @@ All 16 DQ assertions pass. All 11 evals (T1 Correctness, T2 Construct validity, 
            ┌──────────────────────────────────┐
            ▼                                  ▼
     ┌──────────────────┐        ┌───────────────────────┐
-    │ Streamlit        │        │ DQ (16)  +  Evals (11)│
-    │  5 views +       │        │  block / warn / T1-T4 │
+    │ Streamlit        │        │ DQ (16)  +  Evals (16)│
+    │  5 views +       │        │  block / warn / T1-T5 │
     │  NL "Ask cARR"   │        └───────────────────────┘
     └──────────────────┘
            ▲
@@ -195,7 +195,7 @@ Recommended path — ~30 minutes end-to-end:
 | 2 | [`specs/01_problem_statement.md`](specs/01_problem_statement.md) | 3 min | Context, personas, what success looks like |
 | 3 | [`specs/03_north_star_metric.md`](specs/03_north_star_metric.md) | 7 min | The formula + worked examples + new-logo fairness rule (the heart of the proposal) |
 | 4 | [`specs/11_ai_product_surface.md`](specs/11_ai_product_surface.md) | 5 min | The AI layer on top of the metric, incl. golden queries and the agentic roadmap |
-| 5 | [`specs/06_evaluation_framework.md`](specs/06_evaluation_framework.md) | 3 min | How I'd know it's working; 4 tiers with numeric pass criteria |
+| 5 | [`specs/06_evaluation_framework.md`](specs/06_evaluation_framework.md) | 3 min | How I'd know it's working; 5 tiers with numeric pass criteria — incl. T5 transition-fidelity checks for the pricing pivot |
 | 6 | [`specs/08_rollout_plan.md`](specs/08_rollout_plan.md) | 3 min | Phased adoption with gates and rollback |
 | 7 | Run the stack | 5 min | See §"What you can run" above |
 | 8 | Any other spec | — | Drill in per interest |
