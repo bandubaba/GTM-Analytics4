@@ -169,22 +169,48 @@ def build_contracts(accounts: pd.DataFrame, archetypes: dict[str, str]) -> pd.Da
         segment = acc._segment
         acv = _sample_acv(segment)
 
-        # Spike-drop accounts MUST start in-window, else their month-1 burst
-        # happens before our data begins and the anomaly is invisible.
-        if archetypes.get(acc.account_id) == "spike_drop":
-            start_year = random.choice([2025, 2025, 2025])
+        arch = archetypes.get(acc.account_id)
+
+        # Every account MUST be live on WINDOW_END (== as_of_date). Silent
+        # account drop-outs from the metric aren't in the brief's anomaly
+        # list — we keep all 1,000 in scope. Contract age (days between
+        # start_date and as_of_date) is sampled across three ramp buckets
+        # so the eval harness sees the full pre-ramp / ramping / post-ramp
+        # spectrum per segment:
+        #   pre      10–150d  — pre-ramp-end for both Enterprise and MM
+        #   ramping  151–364d — post-ramp-end MM, pre-ramp-end Enterprise
+        #   post     365–900d — post-ramp-end for both segments
+        bucket = random.choices(
+            ["pre", "ramping", "post"],
+            weights=[0.20, 0.30, 0.50],
+            k=1,
+        )[0]
+        if bucket == "pre":
+            contract_age = random.randint(10, 150)
+        elif bucket == "ramping":
+            contract_age = random.randint(151, 364)
         else:
-            start_year = random.choices(
-                [2024, 2025, 2026],
-                weights=[0.18, 0.72, 0.10],
-                k=1,
-            )[0]
-        start = _quarter_end_biased_date(start_year)
-        if archetypes.get(acc.account_id) == "spike_drop":
-            # Clamp: must start at least 45 days into the window so month-1 is observable.
-            start = max(start, C.WINDOW_START + timedelta(days=5))
-            start = min(start, C.WINDOW_END - timedelta(days=90))
-        term_months = random.choices([12, 12, 12, 24, 36], weights=[0.6, 0.1, 0.1, 0.15, 0.05], k=1)[0]
+            contract_age = random.randint(365, 900)
+
+        # Spike-drop's month-1 burst must sit fully inside the observation
+        # window so the anomaly is detectable; cap its age between 90 days
+        # (enough runway for the drop phase to be observable) and the
+        # window length minus 5 (start ≥ WINDOW_START + 5).
+        if arch == "spike_drop":
+            max_age = (C.WINDOW_END - C.WINDOW_START).days - 5
+            contract_age = max(90, min(contract_age, max_age))
+
+        start = C.WINDOW_END - timedelta(days=contract_age)
+
+        # Term must extend past as_of_date so the contract is live today.
+        # Filter the 12/24/36-month options down to those that keep the
+        # end_date past WINDOW_END; fall back to 36mo if none qualify.
+        term_options = [(12, 0.55), (24, 0.30), (36, 0.15)]
+        valid = [(t, w) for t, w in term_options if t * 30 > contract_age + 15]
+        if not valid:
+            valid = [(36, 1.0)]
+        terms, tweights = zip(*valid)
+        term_months = random.choices(terms, weights=tweights, k=1)[0]
         end = start + timedelta(days=term_months * 30)
 
         rows.append({
@@ -282,22 +308,39 @@ def _gen_normal(account_id, contracts_df, logs, counter):
     days = _active_days(contracts_df)
     if not days:
         return
-    # Account-level "personality" so it's not perfectly uniform.
-    util_target = np.random.uniform(0.50, 0.95)       # fraction of included consumed
-    trend = np.random.choice([-0.0006, 0.0, 0.0, 0.0008, 0.0015], p=[0.15, 0.3, 0.3, 0.15, 0.1])
+    # Account-level "personality" so it's not perfectly uniform. Floor at
+    # 0.55 (not 0.50) gives trailing-90d util enough headroom to land above
+    # HS 0.60 even after weekend skips + noise. Negative-trend magnitude is
+    # halved vs. the original so a mature contract's cumulative drift stays
+    # within the cap below.
+    util_target = np.random.uniform(0.55, 0.95)       # fraction of included consumed
+    trend = np.random.choice([-0.0003, 0.0, 0.0, 0.0008, 0.0015], p=[0.15, 0.3, 0.3, 0.15, 0.1])
     for day_idx, (d, monthly_incl, _) in enumerate(days):
         # Baseline: spread included_monthly_credits over ~22 business days, scaled by utilization.
         per_day_mean = monthly_incl / 22.0 * util_target
         weekend = d.weekday() >= 5
         # Tuned so total daily_usage_logs lands near the brief's ~200K target
-        # without flattening the weekday/weekend contrast that the spike-drop
-        # M1-share calculation relies on.
-        skip_prob = 0.18 if weekend else 0.03
+        # now that every one of the 1,000 accounts is live across the window
+        # (no silent drop-outs). Each skipped day's credits are redistributed
+        # onto the remaining days via emit_multiplier so per-account monthly
+        # utilization (and therefore util_u / HealthScore) is invariant to
+        # the skip rate — we're choosing a "sparser but higher-intensity"
+        # emission model rather than actually suppressing usage. That keeps
+        # T1d (normal lands in healthy band) green while hitting ~200K rows.
+        skip_prob = 0.45 if weekend else 0.22
         if random.random() < skip_prob:
             continue
+        emit_multiplier = 1.0 / (1.0 - skip_prob)
         factor = 0.4 if weekend else 1.0
         noise = np.random.uniform(0.6, 1.25)
-        credits = per_day_mean * factor * noise * (1 + trend * day_idx)
+        # Cumulative trend is capped so long-lived contracts don't linearly
+        # drift to near-zero over 2–3 years — real B2B utilization tends to
+        # stabilize within ~±25% of baseline. Without this cap, a mature
+        # "normal" account with a slight negative trend can fall below the
+        # HS 0.60 floor used in T1d, which is an artifact of the linear
+        # model, not the intended archetype behavior.
+        drift = max(-0.25, min(0.40, trend * day_idx))
+        credits = per_day_mean * factor * noise * (1 + drift) * emit_multiplier
         _emit_log(logs, counter, account_id, d, credits)
 
 
