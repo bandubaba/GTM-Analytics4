@@ -50,6 +50,14 @@ def load_dq_summary() -> pd.Series:
 
 
 @st.cache_data(show_spinner=False)
+def _load_archetypes_impl(source_path: str, source_mtime: float) -> pd.DataFrame:
+    """Cached read keyed on (path, mtime) so regen busts the cache."""
+    p = Path(source_path)
+    if p.suffix == ".parquet":
+        return pd.read_parquet(p)
+    return pd.read_csv(p)
+
+
 def load_archetypes() -> pd.DataFrame:
     """Return per-account injected archetype label (what the generator placed).
 
@@ -59,16 +67,25 @@ def load_archetypes() -> pd.DataFrame:
     snapshot the same way it reads every other mart — no dependency on
     the local generator CSV. Falls back to the generator CSV only when the
     pipeline hasn't been run yet (bare-clone local dev).
+
+    Cache invalidates when the underlying file's mtime changes, so a
+    regen / pipeline rerun is picked up on the next Streamlit rerun
+    without requiring a process restart. Raises if neither artifact
+    exists rather than silently returning an empty DataFrame — a silent
+    empty used to mask the "0 / 1000" archetype-count bug.
     """
     parquet = DATA_DIR / "raw_account_archetypes.parquet"
     if parquet.exists():
-        return pd.read_parquet(parquet)
-    # Fallback: pipeline hasn't been run against BQ yet. Read the
-    # generator artifact directly so the dashboard still renders.
+        return _load_archetypes_impl(str(parquet), parquet.stat().st_mtime)
     csv = REPO_ROOT / "data_generation" / "output" / "_account_archetypes.csv"
     if csv.exists():
-        return pd.read_csv(csv)
-    return pd.DataFrame(columns=["account_id", "archetype"])
+        return _load_archetypes_impl(str(csv), csv.stat().st_mtime)
+    raise FileNotFoundError(
+        "No archetype source found. Expected either "
+        f"{parquet} (pipeline export) or {csv} (generator output). "
+        "Run `python pipeline_and_tests/run.py` or "
+        "`python data_generation/generate_data.py` first."
+    )
 
 
 def connect() -> duckdb.DuckDBPyConnection:
