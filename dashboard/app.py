@@ -107,15 +107,58 @@ def _band_display(b: str) -> str:
     return _BAND_LABEL.get(b, b)
 
 
-# Rep leaderboard count columns: `n_at_risk` counts accounts in the
-# `at_risk_shelfware` band, etc. Keep the single source of truth in
-# _BAND_LABEL above.
-_REP_COUNT_LABEL = {
-    "n_at_risk":    _BAND_LABEL["at_risk_shelfware"],
-    "n_spike_drop": _BAND_LABEL["spike_drop"],
-    "n_expansion":  _BAND_LABEL["expansion"],
-    "n_overage":    _BAND_LABEL["overage"],
+# Friendly column labels for every SQL-shaped column name the dashboard
+# shows. _relabel(df) applies this map; unknown columns pass through
+# unchanged. Keeps warehouse names (snake_case) in the mart — only the
+# rendered headers flip. Single source of truth used at every st.dataframe
+# site downstream.
+_COL_LABEL = {
+    # counts — "# of X"
+    "n_accounts":           "# of Accounts",
+    "n":                    "# of Accounts",   # rep_bands agg
+    "count":                "# of Accounts",   # DQ band mix
+    "n_active_contracts":   "# of Active Contracts",
+    # rep leaderboard per-band counts — reuse _BAND_LABEL so it stays in sync
+    "n_at_risk":            _BAND_LABEL["at_risk_shelfware"],
+    "n_spike_drop":         _BAND_LABEL["spike_drop"],
+    "n_expansion":          _BAND_LABEL["expansion"],
+    "n_overage":            _BAND_LABEL["overage"],
+    # percents
+    "pct_accounts":         "Accounts %",
+    "pct_committed":        "ARR %",
+    "pct_carr":             "cARR %",
+    "delta_pct":            "Attainment Δ %",
+    # dollars
+    "committed_arr":        "ARR",
+    "carr":                 "cARR",
+    "delta":                "Attainment Δ",
+    # HealthScore decomposition
+    "base_score":           "Base(U)",
+    "modifier":             "Modifier",
+    "healthscore":          "HealthScore",
+    "weighted_healthscore": "Weighted HS",
+    # utilization signals
+    "utilization_u":        "Utilization U",
+    "m1_share":             "M1 share",
+    # ids / dimensions
+    "account_id":           "Account",
+    "rep_id":               "Rep ID",
+    "rep_name":             "Rep",
+    "region":               "Region",
+    "segment":              "Segment",
+    "industry":             "Industry",
+    "band":                 "Band",
+    # time
+    "contract_age_days":    "Contract Age (days)",
+    "oldest_active_start":  "Oldest Active Start",
+    "as_of_date":           "As of",
 }
+
+
+def _relabel(df: pd.DataFrame) -> pd.DataFrame:
+    """Rename SQL-shaped columns to UI-friendly labels. Safe pass-through
+    on columns not in _COL_LABEL."""
+    return df.rename(columns=_COL_LABEL)
 
 
 def _fmt_rows(rows: pd.DataFrame):
@@ -159,8 +202,12 @@ def _fmt_rows(rows: pd.DataFrame):
             fmt[col] = "{:.1f}%" if already_pct else "{:.1%}"
         elif c.startswith("n_") or c in {"contract_age_days", "count"}:
             fmt[col] = "{:,.0f}"
+    # Translate format keys through _COL_LABEL so .style.format matches the
+    # renamed columns. Heuristic above keyed on original SQL names so
+    # detection stays reliable; UI shows the friendly labels.
+    display_fmt = {_COL_LABEL.get(k, k): v for k, v in fmt.items()}
     try:
-        return rows.style.format(fmt, na_rep="—")
+        return rows.rename(columns=_COL_LABEL).style.format(display_fmt, na_rep="—")
     except Exception:
         return rows
 
@@ -205,18 +252,18 @@ def view_executive():
         band_counts,
         x="band", y=["committed_arr", "carr"],
         barmode="group",
-        labels={"value": "$", "variable": ""},
+        labels={"value": "$", "variable": "", "committed_arr": "ARR", "carr": "cARR"},
         color_discrete_map={"committed_arr": "#34495e", "carr": "#2980b9"},
     )
     st.plotly_chart(fig2, use_container_width=True)
     st.dataframe(
-        band_counts.style.format({
-            "n_accounts":     "{:,.0f}",
-            "pct_accounts":   "{:.1%}",
-            "committed_arr":  _money,
-            "pct_committed":  "{:.1%}",
-            "carr":           _money,
-            "pct_carr":       "{:.1%}",
+        _relabel(band_counts).style.format({
+            "# of Accounts":  "{:,.0f}",
+            "Accounts %":     "{:.1%}",
+            "ARR":            _money,
+            "ARR %":          "{:.1%}",
+            "cARR":           _money,
+            "cARR %":         "{:.1%}",
         }),
         use_container_width=True,
         hide_index=True,
@@ -347,12 +394,12 @@ def view_reps():
 
     st.markdown("#### Leaderboard")
     st.dataframe(
-        rf.sort_values("carr", ascending=False)[
-            ["rep_name", "region", "segment", "n_accounts", "committed_arr", "carr",
-             "weighted_healthscore", "n_at_risk", "n_spike_drop", "n_expansion", "n_overage"]
-        ]
-        .rename(columns=_REP_COUNT_LABEL)
-        .style.format({"committed_arr": _money, "carr": _money, "weighted_healthscore": "{:.3f}"}),
+        _relabel(
+            rf.sort_values("carr", ascending=False)[
+                ["rep_name", "region", "segment", "n_accounts", "committed_arr", "carr",
+                 "weighted_healthscore", "n_at_risk", "n_spike_drop", "n_expansion", "n_overage"]
+            ]
+        ).style.format({"ARR": _money, "cARR": _money, "Weighted HS": "{:.3f}"}),
         use_container_width=True,
         hide_index=True,
     )
@@ -426,14 +473,15 @@ def view_comp_impact():
     fig_band.update_layout(showlegend=False)
     st.plotly_chart(fig_band, use_container_width=True)
 
+    comp_col = f"Comp Δ @ {rate_pct:.1f}%"
     st.dataframe(
-        band_flow.rename(columns={"comp_delta": f"comp_delta_@{rate_pct:.1f}%"})
+        _relabel(band_flow).rename(columns={"comp_delta": comp_col})
             .style.format({
-                "n_accounts": "{:,.0f}",
-                "committed_arr": "${:,.0f}",
-                "carr": "${:,.0f}",
-                "delta": "${:,.0f}",
-                f"comp_delta_@{rate_pct:.1f}%": "${:,.0f}",
+                "# of Accounts":  "{:,.0f}",
+                "ARR":            _money,
+                "cARR":           _money,
+                "Attainment Δ":   _money,
+                comp_col:         _money,
             }),
         use_container_width=True,
         hide_index=True,
@@ -459,19 +507,17 @@ def view_comp_impact():
     st.markdown("#### Ranked — most cut → most lift")
     cols_shown = ["rep_name", "region", "segment", "n_accounts",
                   "committed_arr", "carr", "delta", "delta_pct", "comp_delta"]
+    comp_col = f"Comp Δ @ {rate_pct:.1f}%"
     st.dataframe(
-        rep_flow[cols_shown]
-            .sort_values("delta")
-            .rename(columns={"comp_delta": f"comp_Δ_@{rate_pct:.1f}%",
-                             "delta": "attainment_Δ",
-                             "delta_pct": "attainment_Δ_%"})
+        _relabel(rep_flow[cols_shown].sort_values("delta"))
+            .rename(columns={"comp_delta": comp_col})
             .style.format({
-                "n_accounts": "{:,.0f}",
-                "committed_arr": "${:,.0f}",
-                "carr": "${:,.0f}",
-                "attainment_Δ": "${:,.0f}",
-                "attainment_Δ_%": "{:+.1%}",
-                f"comp_Δ_@{rate_pct:.1f}%": "${:,.0f}",
+                "# of Accounts":   "{:,.0f}",
+                "ARR":             _money,
+                "cARR":            _money,
+                "Attainment Δ":    _money,
+                "Attainment Δ %":  "{:+.1%}",
+                comp_col:          _money,
             }),
         use_container_width=True,
         hide_index=True,
@@ -508,15 +554,15 @@ def view_comp_impact():
     rep_bands = rep_bands.sort_values("delta")
     rep_bands["band"] = rep_bands["band"].map(_band_display)
 
+    comp_col = f"Comp Δ @ {rate_pct:.1f}%"
     st.dataframe(
-        rep_bands.rename(columns={"comp_delta": f"comp_Δ_@{rate_pct:.1f}%",
-                                  "delta": "attainment_Δ"})
+        _relabel(rep_bands).rename(columns={"comp_delta": comp_col})
             .style.format({
-                "n": "{:,.0f}",
-                "committed_arr": "${:,.0f}",
-                "carr": "${:,.0f}",
-                "attainment_Δ": "${:,.0f}",
-                f"comp_Δ_@{rate_pct:.1f}%": "${:,.0f}",
+                "# of Accounts":  "{:,.0f}",
+                "ARR":            _money,
+                "cARR":           _money,
+                "Attainment Δ":   _money,
+                comp_col:         _money,
             }),
         use_container_width=True,
         hide_index=True,
@@ -578,17 +624,17 @@ def view_account_drill():
     st.markdown("### HealthScore decomposition")
     st.dataframe(
         pd.DataFrame([{
-            "segment": row.segment,
-            "contract_age_days": int(row.contract_age_days) if pd.notna(row.contract_age_days) else None,
-            "n_active_contracts": int(row.n_active_contracts),
-            "credits_90d (inferred)": "—",
-            "utilization_u": f"{row.utilization_u:.3f}" if pd.notna(row.utilization_u) else "—",
-            "m1_share": f"{row.m1_share:.3f}" if pd.notna(row.m1_share) else "—",
-            "base(U)": f"{row.base_score:.3f}",
-            "modifier": f"{row.modifier:.3f}",
-            "HealthScore": f"{row.healthscore:.3f}",
-            "cARR": _money(row.carr),
-        }]).T.rename(columns={0: "value"}),
+            "Segment":                 row.segment,
+            "Contract Age (days)":     int(row.contract_age_days) if pd.notna(row.contract_age_days) else None,
+            "# of Active Contracts":   int(row.n_active_contracts),
+            "Credits 90d (inferred)":  "—",
+            "Utilization U":           f"{row.utilization_u:.3f}" if pd.notna(row.utilization_u) else "—",
+            "M1 share":                f"{row.m1_share:.3f}" if pd.notna(row.m1_share) else "—",
+            "Base(U)":                 f"{row.base_score:.3f}",
+            "Modifier":                f"{row.modifier:.3f}",
+            "HealthScore":             f"{row.healthscore:.3f}",
+            "cARR":                    _money(row.carr),
+        }]).T.rename(columns={0: "Value"}),
         use_container_width=True,
     )
 
@@ -617,9 +663,9 @@ def view_dq():
     st.markdown("### Band mix")
     st.dataframe(
         pd.DataFrame({
-            "band": [_band_display(b) for b in
+            "Band": [_band_display(b) for b in
                      ["at_risk_shelfware", "spike_drop", "expansion", "overage", "healthy"]],
-            "count": [dq.n_shelfware, dq.n_spike_drop, dq.n_expansion, dq.n_overage, dq.n_healthy],
+            "# of Accounts": [dq.n_shelfware, dq.n_spike_drop, dq.n_expansion, dq.n_overage, dq.n_healthy],
         }),
         hide_index=True,
         use_container_width=True,
