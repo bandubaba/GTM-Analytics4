@@ -114,21 +114,22 @@ The specs are the source of truth; the code cites them.
 
 ## What the pipeline produces
 
-Running against the seeded dataset (SEED=42, 1000 accounts, ~194K usage rows),
+Running against the seeded dataset (SEED=42, 1,000 accounts, ~215K usage rows),
 verified against a personal GCP sandbox (source tables in `gtm_analytics`,
 pipeline outputs in `gtm_metric`):
 
 | Metric | Value |
 |---|---:|
-| Accounts in metric | 684 |
-| Committed ARR (sum) | $93,913,628 |
-| cARR (sum) | $76,668,483 |
-| Weighted HealthScore | 0.816 |
-| At-risk / shelfware accounts | 114 |
-| Spike-drop accounts | 5 |
-| Expansion accounts | 2 |
-| Ramping (new-logo protected) | 58 |
-| Orphan usage excluded from metric | 343 logs ($73K credit value) |
+| Accounts in metric | 1,000 |
+| Committed ARR (sum) | $133,203,215 |
+| cARR (sum) | $115,673,092 |
+| Weighted HealthScore | 0.868 |
+| Healthy accounts | 411 |
+| At-risk / shelfware accounts | 147 |
+| Spike-drop accounts | 8 |
+| Expansion accounts | 6 |
+| Ramping (new-logo protected) | 83 |
+| Orphan usage excluded from metric | 350 logs ($73K credit value) |
 
 Rerun produces byte-identical parquet — no `NOW()`, no random seeds in the models (D07).
 

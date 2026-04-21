@@ -67,10 +67,10 @@ Expected output on a clean run:
 
 ```
 [pipeline] 13 models executed
-  accounts in metric   : 684
-  Committed_ARR        : $93,913,628
-  cARR                 : $76,668,483
-  weighted HealthScore : 0.816
+  accounts in metric   : 1000
+  Committed_ARR        : $133,203,215
+  cARR                 : $115,673,092
+  weighted HealthScore : 0.868
 [dq]       16 assertions  pass=16  block=0  warn=0
 [evals]    12 checks      pass=12  fail=0
 ```

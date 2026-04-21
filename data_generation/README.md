@@ -35,7 +35,7 @@ python upload_to_bq.py
 | `sales_reps` | 50 | Enterprise vs. Mid-Market; 4 regions weighted NAMER-heavy. |
 | `accounts` | 1,000 | 30% Enterprise / 70% Mid-Market; rep assigned by segment. |
 | `contracts` | ~1,220 | 1 base per account + ~90 mid-year expansions + ~130 renewals. |
-| `daily_usage_logs` | ~194,000 | Clustered by `account_id`. Time-partitioning on `date` is off by default in sandbox and flag-gated for prod — see *Sandbox vs. prod* below. |
+| `daily_usage_logs` | ~215,000 | Clustered by `account_id`. Time-partitioning on `date` is off by default in sandbox and flag-gated for prod — see *Sandbox vs. prod* below. |
 
 ## Account archetypes (injected anomalies)
 
