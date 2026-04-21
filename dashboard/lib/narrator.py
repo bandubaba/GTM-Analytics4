@@ -21,7 +21,7 @@ def _band_copy(band: str) -> str:
         "overage":           "paying overage",
         "ramping":           "early ramp",
         "healthy":           "healthy",
-        "mixed":             "mixed signals",
+        "watch":             "under review (mixed signals)",
     }.get(band, band)
 
 

@@ -108,6 +108,36 @@ All metric parameters live in [`params.py`](params.py). Every value cites
 its source section in spec 03. A code change to a parameter without an
 accompanying spec change is a merge blocker per [`../specs/README.md#how-to-propose-a-change`](../specs/README.md#how-to-propose-a-change).
 
+## Input anomalies vs. output bands — why the counts differ
+
+The brief names **five input anomalies** the metric must handle:
+shelfware, spike-drop, consistent overage, mid-year expansion, orphan /
+rogue usage. These are properties of the **incoming data** — what the
+world throws at the pipeline.
+
+`mart_carr_current.band` exposes **seven output bands** — the
+classifications the metric produces *after* scoring each account:
+`at_risk_shelfware`, `spike_drop`, `overage`, `expansion`, `healthy`,
+`ramping`, `watch`.
+
+| Output band | Maps to brief's anomaly? | Why it exists |
+|---|---|---|
+| `at_risk_shelfware` | ✓ shelfware | HealthScore ≤ 0.55 |
+| `spike_drop` | ✓ spike-and-drop | `m1_share ≥ 0.70` AND `contract_age ≥ 90d` |
+| `overage` | ✓ consistent overage | Sustained `U > 1.10` |
+| `expansion` | ✓ mid-year expansion | `n_active_contracts ≥ 2` AND `U > 1.0` |
+| `healthy` | — (baseline) | HS in `[0.85, 1.15]`. Every classifier needs a "nothing flagged" bucket. |
+| `ramping` | — (comp safety) | Contract age inside the segment's ramp window. Without this, new logos misclassify as shelfware — a comp-safety failure. T4 eval tests this explicitly. |
+| `watch` | — (residual) | HS `0.55–0.85` with no matching archetype. A disciplined "none of the above" bucket; forcing these into `healthy` or `at_risk` would misrepresent the data. |
+
+Orphan / rogue usage (the brief's 5th anomaly) is excluded upstream in
+`int_orphan_usage` and never reaches the band classifier — see spec
+02 §5 for why exclusion is the correct handling.
+
+**Defense in one line:** five input anomalies, seven output bands; four
+bands map 1:1 to the brief's anomalies, the other three are
+classification hygiene (baseline, comp-safety, residual).
+
 ## How the evals tie to the metric design
 
 | Tier | Checks | What a failure means |

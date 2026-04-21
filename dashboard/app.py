@@ -248,7 +248,7 @@ def view_executive():
         "healthy": "#2ecc71",
         "expansion": "#1abc9c",
         "overage": "#16a085",
-        "mixed": "#f39c12",
+        "watch": "#f39c12",
         "ramping": "#3498db",
         "spike_drop": "#e67e22",
         "at_risk_shelfware": "#e74c3c",
@@ -277,14 +277,38 @@ def view_executive():
     with st.expander("What 'band' means"):
         st.markdown(
             """
-- **healthy** — HealthScore in [0.85, 1.15]; nothing flagged.
-- **expansion** — ≥ 2 overlapping contracts and utilization above included.
-- **overage** — sustained utilization above included; customer is paying overage.
-- **ramping** — contract age inside the segment's ramp window; HealthScore
-  is held near booking trust per D12 (new-logo protection).
-- **spike_drop** — ≥ 70% of 90-day usage in month 1 and contract age ≥ 90 days.
-- **at_risk_shelfware** — HealthScore ≤ 0.55.
-- **mixed** — everything else (borderline; warrants human review).
+The brief names **five input anomalies** the metric must handle
+(shelfware, spike-drop, consistent overage, mid-year expansion, orphans).
+The mart exposes **seven output bands** — four mapped 1:1 to the brief's
+anomalies, plus `healthy` (the baseline any classifier needs), `ramping`
+(new-logo comp protection), and `watch` (residual bucket for accounts
+whose current state doesn't match any archetype cleanly).
+
+**Mapped to the brief's anomalies:**
+- **at_risk_shelfware** — HealthScore ≤ 0.55. Covers the brief's
+  *shelfware* anomaly.
+- **spike_drop** — ≥ 70% of 90-day usage in month 1 and contract
+  age ≥ 90 days. Covers the brief's *spike-and-drop* anomaly.
+- **overage** — sustained utilization above included; customer is paying
+  overage. Covers the brief's *consistent overage* anomaly.
+- **expansion** — ≥ 2 overlapping contracts and utilization above
+  included. Covers the brief's *mid-year expansion* anomaly.
+
+**Additional derived bands:**
+- **healthy** — HealthScore in [0.85, 1.15]. Baseline; not an anomaly.
+- **ramping** — contract age inside the segment's ramp window
+  (Enterprise 365d, Mid-Market 180d); HealthScore held near booking
+  trust per D12 (new-logo protection). **Comp-safety feature** —
+  without it, new logos would misclassify as shelfware and unfairly
+  penalize reps.
+- **watch** — residual bucket: HealthScore 0.55–0.85 but no specific
+  archetype pattern. CSMs review these manually. Forcing into
+  *healthy* would misrepresent; forcing into *at_risk* would cause
+  alert fatigue.
+
+Orphan / rogue usage (the brief's 5th anomaly) is excluded upstream
+via `int_orphan_usage` and never reaches this band classifier —
+that's the right handling per spec 02 §5.
             """
         )
 
