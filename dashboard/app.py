@@ -161,102 +161,68 @@ def view_executive():
     st.plotly_chart(fig, use_container_width=True)
 
     # ------------------------------------------------------------------
-    # Archetype mix — the INPUT to the generator. Shown before bands so a
-    # reviewer can verify the synthetic data matches the assignment spec
-    # (10% shelfware, 5% spike_drop, 15% overage, ~few orphan logs) before
-    # judging the metric that sits on top of it.
+    # Edge cases from the assignment — 5 rows, in the order the assignment
+    # lists them, with actuals verified against `_account_archetypes.csv`
+    # and the int_orphan_usage / int_account_active_contracts marts.
     # ------------------------------------------------------------------
-    st.markdown("### Archetype mix — injected by the generator")
+    st.markdown("### Edge cases injected per the assignment")
     st.caption(
-        "The assignment specifies a target distribution — shelfware ~10%, "
-        "spike & drop ~5%, consistent overage ~15%, the rest normal with "
-        "several mid-year expansions and a few hundred orphan usage logs. "
-        "Here is what `_account_archetypes.csv` actually contains, plus how "
-        "each archetype flows into the cARR bands below."
+        "The assignment names five anomalies the metric must handle. Here is "
+        "what our generator actually injected, verified against "
+        "`_account_archetypes.csv`, `int_account_active_contracts`, and "
+        "`int_orphan_usage`."
     )
 
     arch_all = data.load_archetypes()
-    arch_df = df.merge(arch_all, on="account_id", how="left")
-    arch_df["archetype"] = arch_df.archetype.fillna("normal")
+    gen_total = len(arch_all) if len(arch_all) else len(df)
+    g = arch_all.archetype.value_counts() if len(arch_all) else pd.Series(dtype=int)
 
-    # Two universes to compare against the assignment target:
-    #   generator — all accounts on file (1000 rows; matches the assignment's
-    #               "generate 1000 accounts" framing)
-    #   in_mart   — the subset with an active contract on the as_of_date (684);
-    #               these are the accounts the metric actually classifies.
-    # We show both because the assignment's "~10% shelfware" reads naturally
-    # either way, and both should be at the spec target.
-    gen_total = len(arch_all) if len(arch_all) else len(arch_df)
-    gen_counts = arch_all.archetype.value_counts() if len(arch_all) else arch_df.archetype.value_counts()
-    mart_total = len(arch_df)
-    mart_counts = arch_df.archetype.value_counts()
+    # Mid-year expansions — accounts with ≥ 2 active contracts on as_of_date
+    try:
+        act = pd.read_parquet(data.DATA_DIR / "int_account_active_contracts.parquet")
+        n_expansion = int((act.n_active_contracts >= 2).sum())
+    except Exception:
+        n_expansion = int((df.n_active_contracts >= 2).sum())
 
-    spec_targets = {"shelfware": "~10%", "spike_drop": "~5%", "overage": "~15%",
-                    "normal": "rest (~70%)"}
-    spec_table = pd.DataFrame([
-        {
-            "archetype": a,
-            "n_generated":    int(gen_counts.get(a, 0)),
-            "pct_generated":  gen_counts.get(a, 0)  / gen_total  if gen_total  else 0,
-            "n_in_mart":      int(mart_counts.get(a, 0)),
-            "pct_in_mart":    mart_counts.get(a, 0) / mart_total if mart_total else 0,
-            "assignment_target": spec_targets.get(a, "—"),
-        }
-        for a in ["shelfware", "spike_drop", "overage", "normal"]
-    ])
-    st.dataframe(
-        spec_table.style.format({
-            "n_generated":   "{:,.0f}",
-            "pct_generated": "{:.1%}",
-            "n_in_mart":     "{:,.0f}",
-            "pct_in_mart":   "{:.1%}",
-        }),
-        use_container_width=True,
-        hide_index=True,
-    )
-    st.caption(
-        f"**Generated** is all {gen_total:,} accounts on file. **In-mart** is the "
-        f"{mart_total:,} accounts with an active contract on the as_of_date — the "
-        f"subset the cARR formula actually scores. The other "
-        f"{gen_total - mart_total:,} accounts have expired, not-yet-started, or no "
-        "contracts; they're out of scope for *current* cARR. The archetype mix is "
-        "preserved across the filter, so both views hit the assignment targets."
-    )
-
-    # Orphan logs — the 5th assignment item
+    # Orphan logs
     try:
         orph = pd.read_parquet(data.DATA_DIR / "int_orphan_usage.parquet")
-        orph_counts = orph.usage_class.value_counts().to_dict()
-        st.caption(
-            f"**Orphan usage logs** (spec 02 §5.5): "
-            f"`orphan_bad_account` = {orph_counts.get('orphan_bad_account', 0)} rows "
-            f"· `orphan_out_of_window` = {orph_counts.get('orphan_out_of_window', 0)} rows "
-            f"· **valid** = {orph_counts.get('valid', 0):,} rows. "
-            f"Assignment: \"a few hundred\" — matches."
-        )
+        n_bad_account = int((orph.usage_class == "orphan_bad_account").sum())
+        n_oow = int((orph.usage_class == "orphan_out_of_window").sum())
     except Exception:
-        pass
+        n_bad_account = n_oow = 0
 
-    # ------------------------------------------------------------------
-    # Archetype × Band cross-tab — shows T1 correctness visually: does the
-    # metric classify each injected archetype where it's supposed to land?
-    # ------------------------------------------------------------------
-    st.markdown("#### How each archetype flows into the cARR bands")
-    st.caption(
-        "Rows = what the generator injected. Columns = what the cARR formula "
-        "classified the account as. A correctly-tuned formula concentrates "
-        "each archetype in the band you would expect — shelfware in "
-        "at_risk_shelfware, overage in overage, spike_drop in at_risk / spike_drop."
-    )
-    cross = pd.crosstab(arch_df.archetype, arch_df.band)
-    cross = cross.reindex(
-        [a for a in ["shelfware", "spike_drop", "overage", "normal"] if a in cross.index]
-    )
-    band_order = [c for c in ["at_risk_shelfware", "spike_drop", "mixed",
-                              "ramping", "healthy", "overage", "expansion"] if c in cross.columns]
-    cross = cross[band_order]
-    cross["total"] = cross.sum(axis=1)
-    st.dataframe(cross, use_container_width=True)
+    def _pct(n: int) -> str:
+        return f"{n/gen_total:.1%}" if gen_total else "—"
+
+    edge_table = pd.DataFrame([
+        {
+            "anomaly":           "1. Spike & Drop",
+            "assignment":        "~5% of accounts",
+            "actual":            f"{int(g.get('spike_drop', 0))} / {gen_total} accounts ({_pct(int(g.get('spike_drop', 0)))})",
+        },
+        {
+            "anomaly":           "2. Shelfware",
+            "assignment":        "~10% of accounts",
+            "actual":            f"{int(g.get('shelfware', 0))} / {gen_total} accounts ({_pct(int(g.get('shelfware', 0)))})",
+        },
+        {
+            "anomaly":           "3. Consistent Overages",
+            "assignment":        "~15% of accounts",
+            "actual":            f"{int(g.get('overage', 0))} / {gen_total} accounts ({_pct(int(g.get('overage', 0)))})",
+        },
+        {
+            "anomaly":           "4. Mid-Year Expansions",
+            "assignment":        "several accounts with overlapping contracts",
+            "actual":            f"{n_expansion} accounts with ≥2 active contracts on the snapshot date",
+        },
+        {
+            "anomaly":           "5. Orphaned / Rogue Usage",
+            "assignment":        "a few hundred usage logs",
+            "actual":            f"{n_bad_account + n_oow} logs ({n_bad_account} bad account_id + {n_oow} out-of-window)",
+        },
+    ])
+    st.dataframe(edge_table, use_container_width=True, hide_index=True)
 
     st.markdown("### Band distribution — the cARR formula's output")
     band_counts = df.groupby("band").agg(
