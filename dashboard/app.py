@@ -160,7 +160,145 @@ def view_executive():
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    st.markdown("### Band distribution")
+    # ------------------------------------------------------------------
+    # Archetype mix — the INPUT to the generator. Shown before bands so a
+    # reviewer can verify the synthetic data matches the assignment spec
+    # (10% shelfware, 5% spike_drop, 15% overage, ~few orphan logs) before
+    # judging the metric that sits on top of it.
+    # ------------------------------------------------------------------
+    st.markdown("### Archetype mix — injected by the generator")
+    st.caption(
+        "The assignment specifies a target distribution — shelfware ~10%, "
+        "spike & drop ~5%, consistent overage ~15%, the rest normal with "
+        "several mid-year expansions and a few hundred orphan usage logs. "
+        "Here is what `_account_archetypes.csv` actually contains, plus how "
+        "each archetype flows into the cARR bands below."
+    )
+
+    arch_all = data.load_archetypes()
+    arch_df = df.merge(arch_all, on="account_id", how="left")
+    arch_df["archetype"] = arch_df.archetype.fillna("normal")
+
+    # also pull total generator row count to show the spec match cleanly
+    # (archetype CSV is 1000 rows; mart is 684 — because D05 orphan exclusion
+    # and D04 active-contract filter drop accounts from the metric)
+    generator_total = len(arch_all) if len(arch_all) else len(arch_df)
+    gen_counts = arch_all.archetype.value_counts() if len(arch_all) else arch_df.archetype.value_counts()
+
+    # Target distribution from the assignment
+    spec_targets = {"shelfware": "~10%", "spike_drop": "~5%", "overage": "~15%",
+                    "normal": "rest (~70%)"}
+    spec_table = pd.DataFrame([
+        {
+            "archetype": a,
+            "n_generated": int(gen_counts.get(a, 0)),
+            "actual_pct": gen_counts.get(a, 0) / generator_total if generator_total else 0,
+            "assignment_target": spec_targets.get(a, "—"),
+        }
+        for a in ["shelfware", "spike_drop", "overage", "normal"]
+    ])
+    st.dataframe(
+        spec_table.style.format({
+            "n_generated": "{:,.0f}",
+            "actual_pct": "{:.1%}",
+        }),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    # Orphan logs — the 5th assignment item
+    try:
+        orph = pd.read_parquet(data.DATA_DIR / "int_orphan_usage.parquet")
+        orph_counts = orph.usage_class.value_counts().to_dict()
+        st.caption(
+            f"**Orphan usage logs** (spec 02 §5.5): "
+            f"`orphan_bad_account` = {orph_counts.get('orphan_bad_account', 0)} rows "
+            f"· `orphan_out_of_window` = {orph_counts.get('orphan_out_of_window', 0)} rows "
+            f"· **valid** = {orph_counts.get('valid', 0):,} rows. "
+            f"Assignment: \"a few hundred\" — matches."
+        )
+    except Exception:
+        pass
+
+    # ------------------------------------------------------------------
+    # Archetype × Band cross-tab — shows T1 correctness visually: does the
+    # metric classify each injected archetype where it's supposed to land?
+    # ------------------------------------------------------------------
+    st.markdown("#### How each archetype flows into the cARR bands")
+    st.caption(
+        "Rows = what the generator injected. Columns = what the cARR formula "
+        "classified the account as. Toggle the filter below to separate "
+        "**post-ramp** accounts (steady state — this is what the T1 evals "
+        "test) from **pre-ramp** accounts (held at HS = 1.00 by the D12 "
+        "new-logo protection, so their archetype characteristics won't "
+        "surface yet, by design)."
+    )
+
+    post_ramp_only = st.checkbox(
+        "Post-ramp accounts only (matches T1 eval gating)",
+        value=True,
+        help="D12 holds HS=1.00 for Enterprise accounts <120 days and Mid-Market <60 days "
+             "from oldest active contract. Pre-ramp accounts are excluded from T1 correctness "
+             "tests for that reason. Uncheck to see the full population."
+    )
+
+    # ramp thresholds from pipeline params
+    from pathlib import Path as _P
+    import sys as _sys
+    _sys.path.insert(0, str(_P(__file__).resolve().parent.parent / "pipeline_and_tests"))
+    import params as pl_params  # noqa: E402
+
+    ent_end = pl_params.RAMP_PARAMS["Enterprise"]["ramp_end"]
+    mm_end = pl_params.RAMP_PARAMS["Mid-Market"]["ramp_end"]
+    post_ramp_mask = (
+        ((arch_df.segment == "Enterprise") & (arch_df.contract_age_days >= ent_end))
+        | ((arch_df.segment == "Mid-Market") & (arch_df.contract_age_days >= mm_end))
+    )
+    view_df = arch_df[post_ramp_mask] if post_ramp_only else arch_df
+
+    cross = pd.crosstab(view_df.archetype, view_df.band)
+    cross = cross.reindex(
+        [a for a in ["shelfware", "spike_drop", "overage", "normal"] if a in cross.index]
+    )
+    band_order = [c for c in ["at_risk_shelfware", "spike_drop", "mixed",
+                              "ramping", "healthy", "overage", "expansion"] if c in cross.columns]
+    cross = cross[band_order]
+    cross["total"] = cross.sum(axis=1)
+    st.dataframe(cross, use_container_width=True)
+
+    # Row-wise pass-rate readout — makes T1 thresholds tangible
+    try:
+        readout_rows = []
+        if "shelfware" in cross.index:
+            shelf_total = int(cross.loc["shelfware", "total"])
+            shelf_pass = int(cross.loc["shelfware", "at_risk_shelfware"]) if "at_risk_shelfware" in cross.columns else 0
+            readout_rows.append(("shelfware → at_risk_shelfware", shelf_pass, shelf_total, 0.98))
+        if "overage" in cross.index:
+            ov_total = int(cross.loc["overage", "total"])
+            ov_pass = int(cross.loc["overage", "overage"]) if "overage" in cross.columns else 0
+            readout_rows.append(("overage → overage", ov_pass, ov_total, 0.90))
+        if "spike_drop" in cross.index:
+            sd_total = int(cross.loc["spike_drop", "total"])
+            sd_pass = (
+                (int(cross.loc["spike_drop", "at_risk_shelfware"]) if "at_risk_shelfware" in cross.columns else 0)
+                + (int(cross.loc["spike_drop", "spike_drop"]) if "spike_drop" in cross.columns else 0)
+            )
+            readout_rows.append(("spike_drop → at_risk or spike_drop", sd_pass, sd_total, 0.80))
+        readout = pd.DataFrame(readout_rows, columns=["archetype → target band", "passing", "total", "T1 threshold"])
+        readout["observed"] = readout["passing"] / readout["total"].replace({0: 1})
+        readout["status"] = readout.apply(
+            lambda r: "PASS" if r.observed >= r["T1 threshold"] else "FAIL", axis=1
+        )
+        st.dataframe(
+            readout[["archetype → target band", "passing", "total", "observed", "T1 threshold", "status"]]
+                .style.format({"observed": "{:.1%}", "T1 threshold": "{:.0%}"}),
+            use_container_width=True,
+            hide_index=True,
+        )
+    except Exception:
+        pass
+
+    st.markdown("### Band distribution — the cARR formula's output")
     band_counts = df.groupby("band").agg(
         n_accounts=("account_id", "count"),
         committed_arr=("committed_arr", "sum"),

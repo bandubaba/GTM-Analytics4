@@ -49,6 +49,24 @@ def load_dq_summary() -> pd.Series:
     return pd.read_parquet(DATA_DIR / "mart_dq_summary.parquet").iloc[0]
 
 
+@st.cache_data(show_spinner=False)
+def load_archetypes() -> pd.DataFrame:
+    """Return per-account injected archetype label (what the generator placed).
+
+    This is the synthetic-data ground truth — distinct from the cARR `band`,
+    which is the metric's classification at query time. The archetype column
+    lets the dashboard show the assignment-spec mix (10% shelfware, 5% spike,
+    15% overage) separately from how the formula rolls those into bands.
+    Missing archetype rows (e.g. 'normal' generator class) fall back to
+    'normal' so pivots work.
+    """
+    csv = REPO_ROOT / "data_generation" / "output" / "_account_archetypes.csv"
+    if not csv.exists():
+        return pd.DataFrame(columns=["account_id", "archetype"])
+    a = pd.read_csv(csv)
+    return a
+
+
 def connect() -> duckdb.DuckDBPyConnection:
     """Open an in-memory DuckDB with each mart/int parquet registered as a view.
 
