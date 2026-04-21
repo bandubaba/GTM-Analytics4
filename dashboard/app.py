@@ -521,7 +521,7 @@ those checks tangible:
 def view_account_drill():
     st.title("Account drill-down")
     st.caption(
-        "Pick an account. The narrator (spec 11 §3.2) returns a 3-sentence "
+        "Pick an account. The narrator (spec 11 §3.2) returns a 2-sentence "
         "template-filled explanation; every number is traceable to the "
         "HealthScore decomposition below."
     )
