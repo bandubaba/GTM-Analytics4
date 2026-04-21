@@ -57,6 +57,15 @@ SCHEMAS: dict[str, list[bigquery.SchemaField]] = {
         bigquery.SchemaField("date", "DATE", mode="REQUIRED"),
         bigquery.SchemaField("compute_credits_consumed", "NUMERIC", mode="REQUIRED"),
     ],
+    # Synthetic-data provenance: the archetype label the generator placed
+    # on each account (shelfware / spike_drop / overage / normal). Not a
+    # customer-visible table in prod — here it lives in BQ so the dashboard's
+    # assignment-spec compliance view reads from the same source of truth
+    # as every other metric.
+    "account_archetypes": [
+        bigquery.SchemaField("account_id", "STRING", mode="REQUIRED"),
+        bigquery.SchemaField("archetype",  "STRING", mode="REQUIRED"),
+    ],
 }
 
 # daily_usage_logs is by far the biggest table. In a production project we'd
@@ -149,13 +158,23 @@ def main():
     _ensure_dataset(client, dataset_id, location)
 
     print("\n[2/2] Loading CSVs ...")
-    order = ["sales_reps", "accounts", "contracts", "daily_usage_logs"]
-    for name in order:
-        csv = OUT_DIR / f"{name}.csv"
+    # Upload order: the 4 brief-spec tables first, then the archetype
+    # provenance table. Naming quirk: the generator writes the archetype
+    # file as `_account_archetypes.csv` (leading underscore to mark it as
+    # a side-artifact on local disk), but the BQ table is `account_archetypes`.
+    order = [
+        ("sales_reps",         "sales_reps.csv"),
+        ("accounts",           "accounts.csv"),
+        ("contracts",          "contracts.csv"),
+        ("daily_usage_logs",   "daily_usage_logs.csv"),
+        ("account_archetypes", "_account_archetypes.csv"),
+    ]
+    for table_name, filename in order:
+        csv = OUT_DIR / filename
         if not csv.exists():
             sys.exit(f"ERROR: {csv} not found — run `python generate_data.py` first.")
-        print(f"  loading {name} ({csv.stat().st_size/1e6:.1f} MB) ...", end=" ", flush=True)
-        n = _load_csv(client, dataset_id, name, csv)
+        print(f"  loading {table_name} ({csv.stat().st_size/1e6:.1f} MB) ...", end=" ", flush=True)
+        n = _load_csv(client, dataset_id, table_name, csv)
         print(f"{n:,} rows")
 
     print(f"\nDone. Tables loaded into {client.project}.{dataset_id}")

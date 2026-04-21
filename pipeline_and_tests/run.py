@@ -69,22 +69,31 @@ MODEL_ORDER = [
 
 # Every pipeline-produced table is exported to parquet so that
 # dq/run_dq.py, evals/run_evals.py, and the dashboard can read locally
-# without hitting BQ on every question.
+# without hitting BQ on every question. The archetype bridge view is
+# exported too so the dashboard's assignment-spec compliance view reads
+# from BQ-as-source-of-truth (via its parquet snapshot) instead of the
+# local generator CSV.
 EXPORT_TABLES = [
     "stg_sales_reps", "stg_accounts", "stg_contracts", "stg_daily_usage_logs",
     "int_orphan_usage", "int_account_active_contracts", "int_usage_rolled",
     "metric_healthscore", "metric_carr",
     "mart_carr_current", "mart_carr_by_rep", "mart_carr_by_region", "mart_dq_summary",
+    "raw_account_archetypes",
 ]
 
 # BQ upload lands CSVs under these (unprefixed) table names. The SQL
 # models reference `raw_*`, so we create thin views at the top of the
 # run to bridge the naming without mutating the source dataset.
+# `raw_account_archetypes` is synthetic-data provenance — not consumed by
+# any metric model, but exposed as a warehouse view so the dashboard can
+# read the archetype labels through the same BQ-first path as every
+# other mart.
 BQ_RAW_VIEWS = {
-    "raw_sales_reps":       "sales_reps",
-    "raw_accounts":         "accounts",
-    "raw_contracts":        "contracts",
-    "raw_daily_usage_logs": "daily_usage_logs",
+    "raw_sales_reps":         "sales_reps",
+    "raw_accounts":           "accounts",
+    "raw_contracts":          "contracts",
+    "raw_daily_usage_logs":   "daily_usage_logs",
+    "raw_account_archetypes": "account_archetypes",
 }
 
 

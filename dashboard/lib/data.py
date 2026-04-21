@@ -53,18 +53,22 @@ def load_dq_summary() -> pd.Series:
 def load_archetypes() -> pd.DataFrame:
     """Return per-account injected archetype label (what the generator placed).
 
-    This is the synthetic-data ground truth — distinct from the cARR `band`,
-    which is the metric's classification at query time. The archetype column
-    lets the dashboard show the assignment-spec mix (10% shelfware, 5% spike,
-    15% overage) separately from how the formula rolls those into bands.
-    Missing archetype rows (e.g. 'normal' generator class) fall back to
-    'normal' so pivots work.
+    Source of truth is BigQuery (`gtm_analytics.account_archetypes`, bridged
+    into `gtm_metric.raw_account_archetypes`). The pipeline exports that
+    bridge view to parquet on every run, so the dashboard reads the BQ
+    snapshot the same way it reads every other mart — no dependency on
+    the local generator CSV. Falls back to the generator CSV only when the
+    pipeline hasn't been run yet (bare-clone local dev).
     """
+    parquet = DATA_DIR / "raw_account_archetypes.parquet"
+    if parquet.exists():
+        return pd.read_parquet(parquet)
+    # Fallback: pipeline hasn't been run against BQ yet. Read the
+    # generator artifact directly so the dashboard still renders.
     csv = REPO_ROOT / "data_generation" / "output" / "_account_archetypes.csv"
-    if not csv.exists():
-        return pd.DataFrame(columns=["account_id", "archetype"])
-    a = pd.read_csv(csv)
-    return a
+    if csv.exists():
+        return pd.read_csv(csv)
+    return pd.DataFrame(columns=["account_id", "archetype"])
 
 
 def connect() -> duckdb.DuckDBPyConnection:

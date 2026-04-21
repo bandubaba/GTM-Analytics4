@@ -28,6 +28,12 @@ import pandas as pd
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = REPO_ROOT / "pipeline_and_tests" / "data"
+# BQ is source of truth for every table the evals touch — including
+# archetype labels, exposed as the `raw_account_archetypes` bridge view
+# in `gtm_metric` and exported to parquet on every pipeline run. The
+# local generator CSV is a fallback for bare-clone runs where the
+# pipeline hasn't been executed yet.
+ARCHETYPE_PARQUET = DATA_DIR / "raw_account_archetypes.parquet"
 ARCHETYPE_CSV = REPO_ROOT / "data_generation" / "output" / "_account_archetypes.csv"
 
 # Import pipeline params so checks reflect the current spec.
@@ -60,6 +66,11 @@ def _load_carr() -> pd.DataFrame:
 
 
 def _load_archetypes() -> pd.DataFrame:
+    # Prefer the BQ-exported parquet so the eval reads from the same
+    # source-of-truth artifact as the dashboard. Fall back to the
+    # generator CSV for bare-clone dev (pipeline not yet run).
+    if ARCHETYPE_PARQUET.exists():
+        return pd.read_parquet(ARCHETYPE_PARQUET)
     return pd.read_csv(ARCHETYPE_CSV)
 
 
