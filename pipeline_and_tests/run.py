@@ -185,6 +185,16 @@ def main() -> None:
             print("---\nRendered SQL:\n" + sql)
             raise
 
+    # One-time cleanup: earlier versions of the pipeline created a
+    # `raw_account_archetypes` bridge view in the warehouse that pointed
+    # at a 5th source table we no longer upload (the brief specifies 4
+    # source tables). Drop it idempotently so upgraded installs end up
+    # in the same state as a fresh clone.
+    _exec(
+        f"DROP VIEW IF EXISTS {wh_ref}.raw_account_archetypes",
+        "cleanup legacy raw_account_archetypes view",
+    )
+
     # raw_* bridge views live in the warehouse but point at the SOURCE
     # dataset's 4 brief-spec tables. This keeps the source dataset
     # unmodified by the pipeline.
