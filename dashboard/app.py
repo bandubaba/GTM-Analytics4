@@ -114,8 +114,20 @@ def _fmt_rows(rows: pd.DataFrame):
             or c.endswith("_score")
         ):
             fmt[col] = "{:.3f}"
-        elif c in {"utilization_u", "utilization", "m1_share"} or c.endswith("_pct") or c.endswith("_share"):
+        # Explicit ratio columns: U can exceed 1.0 on overage, so we MUST
+        # NOT route these through the pct-heuristic below.
+        elif c in {"utilization_u", "utilization", "m1_share"}:
             fmt[col] = "{:.1%}"
+        # General %/share/rate/ratio column names — Claude-generated SQL
+        # varies: sometimes pre-multiplied (ROUND(x*100, 1) → 33.3),
+        # sometimes a raw ratio (→ 0.333). Detect from the value range.
+        elif any(t in c.split("_") for t in ("pct", "share", "rate", "ratio", "percent")):
+            try:
+                maxabs = float(rows[col].abs().max())
+                already_pct = maxabs > 1.5   # if any value > 1.5, treat as already in %
+            except Exception:
+                already_pct = False
+            fmt[col] = "{:.1f}%" if already_pct else "{:.1%}"
         elif c.startswith("n_") or c in {"contract_age_days", "count"}:
             fmt[col] = "{:,.0f}"
     try:
