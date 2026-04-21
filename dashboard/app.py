@@ -167,6 +167,19 @@ def view_executive():
         carr=("carr", "sum"),
     ).reset_index().sort_values("carr", ascending=False)
 
+    # % share columns — each one sums to 1.0 down the column. Placed right
+    # next to its absolute twin so a reader can read "242 accounts (35.4%)
+    # hold $31M Committed (33.0%) and produce $29.8M cARR (38.9%)".
+    band_counts["pct_accounts"]  = band_counts.n_accounts    / band_counts.n_accounts.sum()
+    band_counts["pct_committed"] = band_counts.committed_arr / band_counts.committed_arr.sum()
+    band_counts["pct_carr"]      = band_counts.carr          / band_counts.carr.sum()
+    band_counts = band_counts[[
+        "band",
+        "n_accounts", "pct_accounts",
+        "committed_arr", "pct_committed",
+        "carr", "pct_carr",
+    ]]
+
     colors = {
         "healthy": "#2ecc71",
         "expansion": "#1abc9c",
@@ -184,7 +197,18 @@ def view_executive():
         color_discrete_map={"committed_arr": "#34495e", "carr": "#2980b9"},
     )
     st.plotly_chart(fig2, use_container_width=True)
-    st.dataframe(band_counts.style.format({"committed_arr": _money, "carr": _money}), use_container_width=True)
+    st.dataframe(
+        band_counts.style.format({
+            "n_accounts":     "{:,.0f}",
+            "pct_accounts":   "{:.1%}",
+            "committed_arr":  _money,
+            "pct_committed":  "{:.1%}",
+            "carr":           _money,
+            "pct_carr":       "{:.1%}",
+        }),
+        use_container_width=True,
+        hide_index=True,
+    )
 
     with st.expander("What 'band' means"):
         st.markdown(
