@@ -107,6 +107,17 @@ def _band_display(b: str) -> str:
     return _BAND_LABEL.get(b, b)
 
 
+# Rep leaderboard count columns: `n_at_risk` counts accounts in the
+# `at_risk_shelfware` band, etc. Keep the single source of truth in
+# _BAND_LABEL above.
+_REP_COUNT_LABEL = {
+    "n_at_risk":    _BAND_LABEL["at_risk_shelfware"],
+    "n_spike_drop": _BAND_LABEL["spike_drop"],
+    "n_expansion":  _BAND_LABEL["expansion"],
+    "n_overage":    _BAND_LABEL["overage"],
+}
+
+
 def _fmt_rows(rows: pd.DataFrame):
     """Apply sensible per-column display formatting to an arbitrary result frame.
 
@@ -339,7 +350,9 @@ def view_reps():
         rf.sort_values("carr", ascending=False)[
             ["rep_name", "region", "segment", "n_accounts", "committed_arr", "carr",
              "weighted_healthscore", "n_at_risk", "n_spike_drop", "n_expansion", "n_overage"]
-        ].style.format({"committed_arr": _money, "carr": _money, "weighted_healthscore": "{:.3f}"}),
+        ]
+        .rename(columns=_REP_COUNT_LABEL)
+        .style.format({"committed_arr": _money, "carr": _money, "weighted_healthscore": "{:.3f}"}),
         use_container_width=True,
         hide_index=True,
     )
