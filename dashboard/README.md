@@ -9,7 +9,7 @@ AI product surface from [`../specs/11_ai_product_surface.md`](../specs/11_ai_pro
 | View | Who it's for | What it answers |
 |---|---|---|
 | **Executive** | VPS, CFO | What's the headline cARR vs Committed ARR? How does it split by region × segment? What's the band mix? |
-| **Reps** | VPS, RevOps | Which reps disperse on weighted HealthScore? Who's carrying at-risk, spike-drop, expansion, ramping books? |
+| **Reps** | VPS, RevOps | Which reps disperse on weighted HealthScore? Who's carrying at-risk, spike-drop, expansion, overage books? |
 | **Account drill** | Rep, CS, audit | For a single account — 3-sentence narrator + full HealthScore decomposition (every slot in the formula is shown) |
 | **Data quality** | Data team, audit | Pipeline totals, orphan exclusions, band mix in one panel |
 | **Ask cARR** | Everyone | NL-query layer over the metric mart; returns narration + rows + SQL (never just prose) |

@@ -204,7 +204,7 @@
   .fill.risk     { background: #fca5a5; }
   .fill.spike    { background: #f87171; }
   .fill.expand   { background: #fbbf24; }
-  .fill.ramp     { background: #93c5fd; }
+  .fill.overage  { background: #93c5fd; }
 
   .demo-callout {
     margin-top: 22px;
@@ -380,7 +380,7 @@
     <div class="eyebrow">Proposal</div>
     <h1 class="slide-title">cARR &mdash; a bounded, rules-based complement to Committed ARR.</h1>
     <p class="subhead">
-      A single dollar-denominated figure that preserves additivity and board recognizability, while incorporating trailing-90-day utilization, expansion, shelfware, spike-drop, and new-logo ramp treatment.
+      A single dollar-denominated figure that preserves additivity and board recognizability, while incorporating trailing-90-day utilization, expansion, shelfware, spike-drop, and a new-logo fairness rule.
     </p>
   </div>
 
@@ -401,9 +401,9 @@
       <div class="b">SQL-expressed rules, not a learned model. Every input is traceable to the spec and defensible in a comp dispute or audit.</div>
     </div>
     <div class="card">
-      <div class="tag">Ramp-aware</div>
-      <div class="h">New logos are handled explicitly.</div>
-      <div class="b">Segment-aware blending: Mid-Market <span class="num">15&ndash;60d</span>, Enterprise <span class="num">30&ndash;120d</span>. Adoption lag during onboarding does not flow to the field metric.</div>
+      <div class="tag">Fair to new logos</div>
+      <div class="h">No adoption signal, no penalty.</div>
+      <div class="b">Accounts with no usage posted yet default to <span class="num">HealthScore&nbsp;=&nbsp;1.00</span> &mdash; full booking credit during the pre-signal window. A single-line rule, not a tuned ramp curve.</div>
     </div>
     <div class="card">
       <div class="tag">Additive</div>
@@ -419,7 +419,7 @@
   </div>
 
   <div class="ftr">
-    <span>cARR = Committed_ARR &times; HealthScore &mdash; spec 03 v0.6</span>
+    <span>cARR = Committed_ARR &times; HealthScore &mdash; spec 03 v0.7</span>
     <span class="pg">2 / 6</span>
   </div>
 </section>
@@ -445,50 +445,50 @@
   <div class="kpis">
     <div class="kpi">
       <div class="lbl">Committed ARR (reported)</div>
-      <div class="v num">$93.9M</div>
+      <div class="v num">$133.2M</div>
     </div>
     <div class="kpi">
       <div class="lbl">cARR (proposed)</div>
-      <div class="v num">$76.7M</div>
+      <div class="v num">$112.7M</div>
     </div>
     <div class="kpi hot">
       <div class="lbl">Implied adjustment</div>
-      <div class="v num">&minus;$17.2M</div>
+      <div class="v num">&minus;$20.5M</div>
     </div>
     <div class="kpi">
       <div class="lbl">Portfolio HealthScore</div>
-      <div class="v num">0.816</div>
+      <div class="v num">0.846</div>
     </div>
   </div>
 
   <div class="bands">
     <div>
-      <h3>Distribution across the 684 in-metric accounts</h3>
+      <h3>Distribution across the 1,000 in-metric accounts</h3>
       <div class="bandbar">
         <div class="bandrow">
           <span class="lbl">Healthy</span>
-          <span class="bar"><span class="fill healthy" style="width: 73.8%"></span></span>
-          <span class="n">505</span>
+          <span class="bar"><span class="fill healthy" style="width: 61.2%"></span></span>
+          <span class="n">612</span>
         </div>
         <div class="bandrow">
           <span class="lbl">At-risk / shelfware</span>
-          <span class="bar"><span class="fill risk" style="width: 16.7%"></span></span>
-          <span class="n">114</span>
+          <span class="bar"><span class="fill risk" style="width: 19.6%"></span></span>
+          <span class="n">196</span>
         </div>
         <div class="bandrow">
-          <span class="lbl">Ramping (protected)</span>
-          <span class="bar"><span class="fill ramp" style="width: 8.5%"></span></span>
-          <span class="n">58</span>
+          <span class="lbl">Overage</span>
+          <span class="bar"><span class="fill overage" style="width: 17.8%"></span></span>
+          <span class="n">178</span>
         </div>
         <div class="bandrow">
           <span class="lbl">Spike-drop</span>
-          <span class="bar"><span class="fill spike" style="width: 0.7%"></span></span>
-          <span class="n">5</span>
+          <span class="bar"><span class="fill spike" style="width: 0.8%"></span></span>
+          <span class="n">8</span>
         </div>
         <div class="bandrow">
           <span class="lbl">Expansion</span>
-          <span class="bar"><span class="fill expand" style="width: 0.3%"></span></span>
-          <span class="n">2</span>
+          <span class="bar"><span class="fill expand" style="width: 0.6%"></span></span>
+          <span class="n">6</span>
         </div>
       </div>
     </div>
@@ -496,13 +496,13 @@
     <div>
       <h3>What these figures indicate</h3>
       <p style="font-size: 14px; color: var(--ink-2); line-height: 1.55; margin: 0;">
-        <b style="color: var(--ink);">114 accounts</b> are classified at-risk under the HealthScore rule &mdash; reported at full Committed ARR today, with low trailing-90-day utilization.
+        <b style="color: var(--ink);">196 accounts</b> are classified at-risk under the HealthScore rule &mdash; reported at full Committed ARR today, with low trailing-90-day utilization.
       </p>
       <p style="font-size: 14px; color: var(--ink-2); line-height: 1.55; margin: 10px 0 0 0;">
-        <b style="color: var(--ink);">58 accounts</b> are inside their ramp window. Under v0.5 of the formula they would have taken a HealthScore haircut; D12 ramp blending corrects this before any comp impact.
+        <b style="color: var(--ink);">178 accounts</b> are consuming above contracted entitlement (trailing-90d <code style="font-size:12.5px;">U&nbsp;&gt;&nbsp;1.10</code>) &mdash; expansion revenue the current Committed ARR figure is silent about, capped at <span class="num">1.30&times;</span> by design.
       </p>
       <p style="font-size: 14px; color: var(--ink-2); line-height: 1.55; margin: 10px 0 0 0;">
-        <b style="color: var(--ink);">343 usage logs</b> (~$73K of credits) are excluded as orphans under the D05 rule. Including them would distort each rep&rsquo;s HealthScore denominator.
+        <b style="color: var(--ink);">350 usage logs</b> (~$73K of credits) are excluded as orphans under the D05 rule. Including them would distort each rep&rsquo;s HealthScore denominator.
       </p>
     </div>
   </div>
@@ -513,7 +513,7 @@
   </div>
 
   <div class="ftr">
-    <span>Source: pipeline_and_tests/data &mdash; snapshot 2026-04-18</span>
+    <span>Source: pipeline_and_tests/data &mdash; snapshot 2026-04-20</span>
     <span class="pg">3 / 6</span>
   </div>
 </section>
@@ -547,7 +547,7 @@
     <div class="objection">
       <div class="q">Formula integrity and accuracy.</div>
       <div class="a">
-        Twelve automated evals across four tiers, from <b>T1 Correctness</b> to <b>T4 Comp safety</b>. T4 is stop-the-line: a single account where <code style="font-size:12.5px;">cARR &gt; Committed</code> halts deployment. The SQL pipeline is the system of record; the AI layer (Ask cARR) is never authoritative and shows its generated SQL alongside every answer.
+        Eleven automated evals across four tiers, from <b>T1 Correctness</b> to <b>T4 Comp safety</b>. T4 is stop-the-line: a single account where <code style="font-size:12.5px;">cARR &gt; Committed</code> halts deployment. The SQL pipeline is the system of record; the AI layer (Ask cARR) is never authoritative and shows its generated SQL alongside every answer.
       </div>
     </div>
 
@@ -559,15 +559,15 @@
     </div>
 
     <div class="objection">
-      <div class="q">New-logo treatment during ramp.</div>
+      <div class="q">New-logo fairness, without a tuning fight.</div>
       <div class="a">
-        <b>D12 &mdash; segment-aware ramp blending.</b> A new Enterprise logo carries the healthy baseline (HealthScore 1.00) from day 1, blending linearly to the measured HealthScore over <span class="num">30&ndash;120</span> days. Mid-Market blends over <span class="num">15&ndash;60</span> days. <span class="num">58</span> accounts are currently inside that window. Adoption lag during onboarding does not flow to the field metric.
+        <b>D12b &mdash; pre-signal trust.</b> When an account has no usage posted yet (<code style="font-size:12.5px;">U</code> is undefined), <code style="font-size:12.5px;">HealthScore&nbsp;=&nbsp;1.00</code> by default &mdash; full booking credit during the pre-signal window. A one-line rule with zero tuning parameters, replacing the v0.6 segment-aware ramp blend that would have invited a four-knob review every comp cycle. The gaming guard (<code style="font-size:12.5px;">contract_age</code> anchored to the oldest active contract) survives intact for the spike-drop age gate.
       </div>
     </div>
   </div>
 
   <div class="ftr">
-    <span>Mitigations map to specs 05 (DQ) &middot; 06 (Evals) &middot; 08 (Rollout) &middot; 03 §D12</span>
+    <span>Mitigations map to specs 05 (DQ) &middot; 06 (Evals) &middot; 08 (Rollout) &middot; 03 §D12b</span>
     <span class="pg">4 / 6</span>
   </div>
 </section>
@@ -595,10 +595,10 @@
       <div class="step">01 &middot; Specifications and decision records</div>
       <h4>The argument before the code.</h4>
       <p>
-        Twelve markdown specifications, twelve architecture decision records (ADRs) in a shared decision log. Every code file cites the spec section it implements, and parameter changes require a spec amendment in the same pull request.
+        Twelve markdown specifications, thirteen architecture decision records (ADRs &mdash; including one supersedence, D12&rarr;D12b) in a shared decision log. Every code file cites the spec section it implements, and parameter changes require a spec amendment in the same pull request.
       </p>
       <ul>
-        <li>Spec 03 v0.6 &mdash; the formula and ramp treatment</li>
+        <li>Spec 03 v0.7 &mdash; the formula and new-logo fairness rule</li>
         <li>Spec 05 &mdash; data-quality catalog (16 assertions)</li>
         <li>Spec 06 &mdash; eval framework (T1&ndash;T4)</li>
         <li>Spec 11 &mdash; the AI product surface</li>
@@ -615,7 +615,7 @@
         <b>D09:</b> An assistant-generated MONTH-partitioned BQ schema interacted with the sandbox&rsquo;s 60-day expiration policy, silently evicting 77% of rows on load. Caught at integration, not unit test.
       </div>
       <div class="caught">
-        <b>D12:</b> Version 0.5 of the formula produced a uniform HealthScore haircut for every new logo. A dedicated new-logo eval failed and forced the ramp-blend redesign.
+        <b>D12&rarr;D12b:</b> Version 0.5 of the formula produced a uniform HealthScore haircut for every new logo. A dedicated new-logo eval failed. The v0.6 fix added a four-parameter segment-aware ramp blend; v0.7 supersedes it with a single-line pre-signal trust rule &mdash; fewer knobs, same fairness guarantee.
       </div>
       <p style="margin-top: 10px; font-size: 12.5px; color: var(--ink-3);">
         Commit-level provenance is preserved: every commit carries a <code style="font-size:11px;">Co-Authored-By</code> trailer identifying the assistant and the model.

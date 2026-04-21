@@ -16,12 +16,12 @@ pipeline_and_tests/
 │   ├── staging/                4 typed mirrors of the raw CSVs
 │   ├── intermediate/           orphan split (D05), active-contract aggregation
 │   │                           (D04/D12), 90-day usage roll
-│   ├── metric/                 HealthScore (with ramp blend) and cARR
+│   ├── metric/                 HealthScore (v0.7 single formula) and cARR
 │   └── mart/                   4 presentation tables for the dashboard
 ├── dq/
 │   └── run_dq.py               16 assertions in two severity tiers (block/warn)
 ├── evals/
-│   └── run_evals.py            12 checks across T1/T2/T3/T4 from spec 06
+│   └── run_evals.py            11 checks across T1/T2/T3/T4 from spec 06
 └── data/                       (gitignored) parquet exports of every model
 ```
 
@@ -69,10 +69,10 @@ Expected output on a clean run:
 [pipeline] 13 models executed
   accounts in metric   : 1000
   Committed_ARR        : $133,203,215
-  cARR                 : $115,673,092
-  weighted HealthScore : 0.868
+  cARR                 : $112,715,015
+  weighted HealthScore : 0.846
 [dq]       16 assertions  pass=16  block=0  warn=0
-[evals]    12 checks      pass=12  fail=0
+[evals]    11 checks      pass=11  fail=0
 ```
 
 ## Why parquet exports (not BQ round-trips)
@@ -108,17 +108,15 @@ All metric parameters live in [`params.py`](params.py). Every value cites
 its source section in spec 03. A code change to a parameter without an
 accompanying spec change is a merge blocker per [`../specs/README.md#how-to-propose-a-change`](../specs/README.md#how-to-propose-a-change).
 
-## Input anomalies vs. output bands — why the counts differ
+## Input anomalies vs. output bands
 
 The brief names **five input anomalies** the metric must handle:
 shelfware, spike-drop, consistent overage, mid-year expansion, orphan /
 rogue usage. These are properties of the **incoming data** — what the
 world throws at the pipeline.
 
-`mart_carr_current.band` exposes **seven output bands** — the
-classifications the metric produces *after* scoring each account:
-`at_risk_shelfware`, `spike_drop`, `overage`, `expansion`, `healthy`,
-`ramping`, `watch`.
+`mart_carr_current.band` exposes **five output bands**: the four
+non-orphan anomalies, plus a `healthy` baseline for everything else.
 
 | Output band | Maps to brief's anomaly? | Why it exists |
 |---|---|---|
@@ -126,26 +124,29 @@ classifications the metric produces *after* scoring each account:
 | `spike_drop` | ✓ spike-and-drop | `m1_share ≥ 0.70` AND `contract_age ≥ 90d` |
 | `overage` | ✓ consistent overage | Sustained `U > 1.10` |
 | `expansion` | ✓ mid-year expansion | `n_active_contracts ≥ 2` AND `U > 1.0` |
-| `healthy` | — (baseline) | HS in `[0.85, 1.15]`. Every classifier needs a "nothing flagged" bucket. |
-| `ramping` | — (comp safety) | Contract age inside the segment's ramp window. Without this, new logos misclassify as shelfware — a comp-safety failure. T4 eval tests this explicitly. |
-| `watch` | — (residual) | HS `0.55–0.85` with no matching archetype. A disciplined "none of the above" bucket; forcing these into `healthy` or `at_risk` would misrepresent the data. |
+| `healthy` | — (baseline) | Everything else. Every classifier needs a "nothing flagged" bucket. |
 
 Orphan / rogue usage (the brief's 5th anomaly) is excluded upstream in
 `int_orphan_usage` and never reaches the band classifier — see spec
 02 §5 for why exclusion is the correct handling.
 
-**Defense in one line:** five input anomalies, seven output bands; four
-bands map 1:1 to the brief's anomalies, the other three are
-classification hygiene (baseline, comp-safety, residual).
+**Why no `ramping` band (v0.6 → v0.7 change).** v0.6 carried a
+segment-aware ramp blend on HealthScore and a corresponding output
+band. The blend was defensible in principle but drew scope objections
+("the brief didn't ask for that") and the ramp-window numbers were
+hard to justify on a single take-home. v0.7 drops both the blend and
+the band — new logos with no usage yet fall through the `U IS NULL →
+base = 1.00` branch of base(U), which gives a reasonable default
+without a separate parameter.
 
 ## How the evals tie to the metric design
 
 | Tier | Checks | What a failure means |
 |---|---|---|
 | **T1 Correctness** | shelfware → floor, overage → [1.00, 1.30], spike-drop → detected, normal → healthy band | The SQL is implementing the metric wrong. P0. |
-| **T2 Construct validity** | HS bounds, ramp weight [0,1] + monotonic, `cARR = Commit × HS` to 6 decimals | The formula as coded disagrees with the spec. P0. |
+| **T2 Construct validity** | HS bounds, `HS = clamp(base × modifier, FLOOR, CAP)`, `cARR = Commit × HS` to 6 decimals | The formula as coded disagrees with the spec. P0. |
 | **T3 Decision utility** | shelfware visibly at-risk, rep-level weighted-HS dispersion | The metric is computable but doesn't help decide anything. Design issue. |
-| **T4 Comp safety** | no cARR/Commit > HS_CAP, new-logo protection (HS=1.00), orphan exclusion | A rep could be paid wrong. P0 for comp. |
+| **T4 Comp safety** | no cARR/Commit > HS_CAP, orphan exclusion | A rep could be paid wrong. P0 for comp. |
 
 T1 and T4 failures exit non-zero (stop-the-line); T2/T3 warn but continue.
 

@@ -19,8 +19,6 @@ SELECT
     h.m1_share,
     h.base_score,
     h.modifier,
-    h.ramp_w,
-    h.healthscore_steady,
     h.healthscore,
     a.active_committed_arr * h.healthscore AS carr,
     a.contract_age_days,

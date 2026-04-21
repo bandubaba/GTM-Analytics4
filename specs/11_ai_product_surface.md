@@ -78,10 +78,9 @@ Invoked from the dashboard's account or rep drill-down (spec 07). For a selected
 1. Pulls the HealthScore decomposition from `mart_carr_health_components`.
 2. Pulls the anomaly flags from `mart_carr_anomalies` (shelfware, spike-drop, expansion, overage — the archetypes in spec 02).
 3. Pulls the trailing 90-day usage pattern from `int_usage_rolled`.
-4. Generates a 3-sentence narrative following a strict template:
+4. Generates a 2-sentence narrative following a strict template:
    - Sentence 1: the current HealthScore and its plain-English band (e.g., "shelfware-leaning," "expanding").
-   - Sentence 2: the single largest driver (utilization ratio, anomaly flag, ramp status).
-   - Sentence 3: the trend vs. prior period (up/down/flat) with the magnitude.
+   - Sentence 2: the single largest driver (utilization ratio, anomaly flag).
 5. **Footnotes** every numeric claim with a SQL snippet or row reference. A rep can click through to the raw rows.
 
 The narrative is a *rendered template*, not a free-form LLM generation. The LLM's job is to pick the right template branch and fill the slots, not to write prose. This discipline is what keeps the output auditable.

@@ -118,10 +118,6 @@ def _render(sql_path: Path) -> str:
         spike_drop_min_age=params.SPIKE_DROP_MIN_AGE_DAYS,
         spike_drop_modifier=params.SPIKE_DROP_MODIFIER,
         expansion_modifier=params.EXPANSION_MODIFIER,
-        ent_ramp_full=params.RAMP_PARAMS["Enterprise"]["ramp_full"],
-        ent_ramp_end=params.RAMP_PARAMS["Enterprise"]["ramp_end"],
-        mm_ramp_full=params.RAMP_PARAMS["Mid-Market"]["ramp_full"],
-        mm_ramp_end=params.RAMP_PARAMS["Mid-Market"]["ramp_end"],
     )
 
 
@@ -238,7 +234,7 @@ def main() -> None:
     print(f"  at-risk / shelfware accts: {summary['n_shelfware']}")
     print(f"  spike-drop accts         : {summary['n_spike_drop']}")
     print(f"  expansion accts          : {summary['n_expansion']}")
-    print(f"  ramping accts            : {summary['n_ramping']}")
+    print(f"  overage accts            : {summary['n_overage']}")
     print(f"  healthy accts            : {summary['n_healthy']}")
     print(f"  orphan logs (bad acct)   : {summary['n_orphan_bad_account']}")
     print(f"  orphan logs (out of win) : {summary['n_orphan_out_of_window']}")

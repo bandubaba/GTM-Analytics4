@@ -6,8 +6,8 @@
 | Audience      | VP Sales, CFO, Finance, Sales Ops, RevOps, PM, data team         |
 | Owner         | Principal PM, GTM Analytics                                      |
 | Status        | Draft                                                            |
-| Version       | 0.6                                                              |
-| Last reviewed | 2026-04-19                                                       |
+| Version       | 0.7                                                              |
+| Last reviewed | 2026-04-20                                                       |
 | Related       | [01 — Problem Statement](01_problem_statement.md), [02 — Data Model](02_data_model.md), [06 — Evaluation Framework](06_evaluation_framework.md), [10 — Glossary](10_glossary.md) |
 
 ---
@@ -66,9 +66,6 @@ Let, for account `a` and as-of date `T`:
 | `U(a, T)` | Trailing 90-day utilization ratio: `trailing_90d_consumed / trailing_90d_included` | §3.3, §3.4 |
 | `M₁(a, T)` | Share of trailing-90-day consumption that occurred in the first 30 days of `a`'s oldest active contract | §3.5 |
 | `contract_age(a, T)` | Days since `start_date` of `a`'s oldest active contract | derived |
-| `segment(a)` | `a`'s segment via `accounts.rep_id → sales_reps.segment` (`Enterprise` or `Mid-Market`) | [spec 02](02_data_model.md) |
-| `ramp_full(segment)` | Days of full booking-trust by segment (see §2.2) | parameter |
-| `ramp_end(segment)` | Day at which ramp protection ends and the original formula takes over (see §2.2) | parameter |
 | `expanded(a, T)` | Boolean: `a` has ≥2 contracts with overlapping `[start_date, end_date]` at any point in the trailing 365 days | derived |
 
 Then:
@@ -84,34 +81,21 @@ Then:
     1.05    if expanded                             # expansion credit
     1.00    otherwise
 
- HealthScore_steady = clamp( base(U) × modifier, 0.40, 1.30 )
-
- # New in v0.6 — ramp protection for new-logo fairness (Decision D12)
- w(contract_age, segment) =
-     0.0                                              if contract_age ≤ ramp_full(segment)
-     (contract_age − ramp_full) / (ramp_end − ramp_full)   if ramp_full < contract_age < ramp_end
-     1.0                                              if contract_age ≥ ramp_end
-
- HealthScore = (1 − w) × 1.00  +  w × HealthScore_steady
+ HealthScore = clamp( base(U) × modifier, 0.40, 1.30 )
 ```
-
-**Reading the composition.** During the full-trust window (`contract_age ≤ ramp_full`) the weight `w = 0`, so `HealthScore = 1.00` and `cARR = CommittedARR` exactly. Past `ramp_end`, `w = 1` and the formula collapses to `HealthScore_steady` — identical to the v0.5 definition. In between, the two blend linearly. No cliffs; no step-functions in a rep's paycheck.
 
 Only one modifier applies at a time. If an account triggers **both** spike-drop and expansion (unusual but possible), spike-drop wins — a burned-then-expanded customer is not healthier than a customer with clean steady growth, and the conservative signal prevails. This tiebreak is a policy decision, not a derivation from the business logic; it is recorded as decision **D11a** and can be revisited on data.
 
-### 2.2 Ramp protection parameters
+**New logos without a usage signal yet.** When `U` is undefined (no expected credits yet, or contract just signed and no usage has posted), `base(U)` defaults to 1.00 via the null branch in §3.6. The modifier is 1.00 (spike-drop requires ≥90d age; expansion requires overlap + `U > 1.0`), so `HealthScore = 1.00` and `cARR = CommittedARR` exactly — the rep earns full booking credit during the pre-signal window without a separate ramp parameter.
 
-`contract_age` is measured from the `start_date` of the account's **oldest active contract**, not the most recent — this prevents a rep from gaming ramp protection by triggering a tiny contract gap at renewal (see §3.7).
+### 2.2 Removed — ramp-blended HealthScore (v0.6 only)
 
-| Segment | `ramp_full` (days of full trust) | `ramp_end` (ramp ends) | Rationale |
-|---|---:|---:|---|
-| Mid-Market | 15 | 60 | Fast time-to-value: self-serve onboarding, shorter procurement, usage signal emerges in weeks |
-| Enterprise | 30 | 120 | Complex procurement, security review, multi-quarter deployment; usage signal legitimately lags |
-| (unknown / `NULL`) | 30 | 120 | Conservative default — treat as Enterprise |
+v0.6 carried a segment-aware ramp blend `HealthScore = (1 − w) · 1.00 + w · HealthScore_steady` with `w` rising from 0 to 1 across a `[ramp_full, ramp_end]` window. v0.7 drops it. Two reasons:
 
-Segment is resolved from `accounts.rep_id → sales_reps.segment` at the **as-of date `T`**, consistent with the rest of the metric. Mid-cycle segment reassignment is out of scope for v1 (see [spec 02 §12](02_data_model.md#12-open-questions)).
+1. **Parameter fight surface.** The ramp windows (`ramp_full` / `ramp_end` per segment) introduced four new tuning parameters that every comp cycle would re-litigate. Every knob is debt.
+2. **Defensibility over cleverness.** The blend was mathematically smooth but visually two curves glued together. A CFO can read `clamp(base × modifier, 0.40, 1.30)` in one breath; the blended version takes three.
 
-See §6 for how parameter changes are controlled.
+New-logo comp fairness is preserved by the `U IS NULL → base = 1.00` path in §3.6: an account with no measurable usage yet lands at `HealthScore = 1.00`. This handles the first-30-day "no signal yet" case without the blend. Accounts that *do* have early usage and the usage is light will now score below 1.00 — a known and accepted trade-off. If shadow-comp data shows systematic rep harm from this, revisit with a simpler single-parameter "grace floor" (e.g., `HealthScore = max(HS_steady, 0.80)` for `contract_age < 30d`) rather than reintroducing the full blend.
 
 ### 2.3 Endpoint and continuity checks
 
@@ -126,33 +110,6 @@ See §6 for how parameter changes are controlled.
 | 1.00 | 1.12 | Fully utilizing included capacity |
 | 1.20 | 1.24 | Moderate overage (A3) |
 | 1.30 | 1.30 | Cap — further overage saturates |
-
-#### 2.3.2 Ramp blend — Enterprise shelfware example
-
-An Enterprise account that will eventually become shelfware (`HealthScore_steady = 0.40`). Watch the blend glide from 1.00 at signing to the steady-state floor at day 120 — no step, no cliff.
-
-| `contract_age` | `w` | `HealthScore` | cARR / ARR |
-|---:|---:|---:|---:|
-| 0 | 0.00 | 1.00 | 1.00 |
-| 30 | 0.00 | 1.00 | 1.00 |
-| 60 | 0.33 | 0.80 | 0.80 |
-| 90 | 0.67 | 0.60 | 0.60 |
-| 120 | 1.00 | 0.40 | 0.40 |
-| 150 | 1.00 | 0.40 | 0.40 |
-
-#### 2.3.3 Ramp blend — Mid-Market overage example
-
-A Mid-Market account that will reach `HealthScore_steady = 1.20` (consistent overage). Upside is earned faster because MM time-to-value is faster.
-
-| `contract_age` | `w` | `HealthScore` | cARR / ARR |
-|---:|---:|---:|---:|
-| 0 | 0.00 | 1.00 | 1.00 |
-| 15 | 0.00 | 1.00 | 1.00 |
-| 30 | 0.33 | 1.07 | 1.07 |
-| 45 | 0.67 | 1.13 | 1.13 |
-| 60 | 1.00 | 1.20 | 1.20 |
-
-**Symmetry note.** Ramp protection can both *raise* a would-be shelfware account (example above) and *suppress* a would-be overage account during the trust window. This is deliberate: letting overage push a rep above 1.00 during the customer's ramp would create the inverse of the shelfware unfairness problem. Reality lag is two-sided — so the protection is two-sided.
 
 ---
 
@@ -211,24 +168,24 @@ If `trailing_90d_consumed_credits(a, T) = 0`, `M₁` is undefined and the spike-
 |---|---|---|---|
 | No active contract on `T` | N/A | **undefined — excluded from rollups** | No commitment, no contribution |
 | Active contract, `included = 0` (impossible by schema; caught by DQ) | N/A | **undefined — DQ alert** | Data integrity breach |
-| Active contract, `consumed = 0`, `contract_age ≥ ramp_end` | 0.00 | 0.40 | Steady-state shelfware floor |
-| Active contract, `consumed = 0`, `contract_age < ramp_end` | 0.00 | per §2.1 blend | Ramp-protected: steady-state floor is blended with 1.00 |
-| Active contract, `U > 0` | numeric | per §2.1 | Normal path (still ramp-aware) |
+| Active contract, **no usage posted yet** (`trailing_90d_included = 0` because contract just signed, or `consumed` is null) | undefined | 1.00 | No signal; trust the booking. This is the "pre-signal" path referenced in §2.1. |
+| Active contract, `consumed = 0` over a full 90-day window | 0.00 | 0.40 | Shelfware floor |
+| Active contract, `U > 0` | numeric | per §2.1 | Normal path |
 
 **Excluded accounts are not null rows** in the published marts — they are simply absent. The mart schema does not allow null `cARR`.
 
-### 3.7 Renewal semantics (new in v0.6)
+### 3.7 Renewal semantics
 
 Renewals are contract-end / contract-start boundaries for the *same* account. The metric does not have a special "renewal" code path — it reuses existing mechanics — but the behavior must be explicit, because it is the #1 source of ambiguity when reps read the rule.
 
 | Pattern | `CommittedARR(a, T)` at the boundary | `HealthScore` behavior | `contract_age` semantics |
 |---|---|---|---|
-| **Overlapping renewal** (expansion signed before old contract ends — A4) | Sums both contracts during overlap | `expanded = true` → `+5%` modifier | Measured from *oldest active* contract — ramp does not reset |
-| **Back-to-back renewal** (new contract `start_date` = old contract `end_date + 1`) | Transitions cleanly from old ARR → new ARR | No modifier fires on the renewal itself | Measured from *oldest active* — **ramp does not reset** at the boundary |
-| **Gap renewal** (new contract starts > 1 day after old ended) | Old contract's `end_date` → account has no active contract → **excluded** from rollups during gap | Not computed during gap | On new contract's start, `contract_age` *does* reset (no older active contract exists) — ramp protection applies fresh |
+| **Overlapping renewal** (expansion signed before old contract ends — A4) | Sums both contracts during overlap | `expanded = true` → `+5%` modifier | Measured from *oldest active* contract |
+| **Back-to-back renewal** (new contract `start_date` = old contract `end_date + 1`) | Transitions cleanly from old ARR → new ARR | No modifier fires on the renewal itself | Measured from *oldest active* contract |
+| **Gap renewal** (new contract starts > 1 day after old ended) | Old contract's `end_date` → account has no active contract → **excluded** from rollups during gap | Not computed during gap | On new contract's start, `contract_age` *does* reset (no older active contract exists) |
 | **Non-renewal** (old contract ends, no replacement) | → 0 → account excluded after `end_date` | Not computed | N/A — a separate `renewal_rate` metric covers the renewal motion |
 
-**Why `contract_age` is measured from the oldest active contract.** If `contract_age` reset on every new contract, a rep could game ramp protection by triggering a one-day gap at renewal to reset the 120-day ramp clock. Tying the clock to "oldest active" closes that loophole. The price is that a customer who truly gaps out and then re-signs (rare) enters a legitimate fresh ramp — we accept this narrow case because the alternative invites systematic gaming.
+**Why `contract_age` is measured from the oldest active contract.** The ramp blend has been removed (§2.2), but `contract_age` is still used as the age guard on the spike-drop modifier. Measuring from the oldest active contract prevents a rep from gaming the spike-drop lookback with a one-day contract gap at renewal. Tying the clock to "oldest active" closes that loophole. The price is that a customer who truly gaps out and then re-signs (rare) enters a legitimate fresh lookback — we accept this narrow case because the alternative invites systematic gaming.
 
 **Renewal uplift is not automatically "expansion".** If a customer renews at a higher ARR via a back-to-back (non-overlapping) new contract, the `expanded` flag does **not** fire — because `expanded` is defined on *overlapping* contracts (§2.1). Rationale: the expansion credit exists to reward the mid-term land-and-expand motion; sequential renewal uplift is a different commercial motion and is owned by a separate renewal-rate metric. This is an explicit scope choice, not an oversight — revisit if VPS argues for convergence.
 
@@ -312,10 +269,6 @@ Determinism is enforced by the invariant in §7 item 5 and tested in spec 06 T1.
 | Spike-drop dampener multiplier | 0.70 | 0.50–0.80 | CFO |
 | Expansion credit multiplier | 1.05 | 1.00–1.10 | VP Sales |
 | Modifier precedence (tiebreak) | spike-drop > expansion | — | Principal PM |
-| Ramp `ramp_full` — Mid-Market | 15 days | 7 / 15 / 30 | VP Sales + CFO (joint) |
-| Ramp `ramp_end` — Mid-Market | 60 days | 30 / 60 / 90 | VP Sales + CFO (joint) |
-| Ramp `ramp_full` — Enterprise | 30 days | 15 / 30 / 60 | VP Sales + CFO (joint) |
-| Ramp `ramp_end` — Enterprise | 120 days | 90 / 120 / 180 | VP Sales + CFO (joint) |
 
 Parameter changes require:
 1. PR modifying `pipeline_and_tests/metrics/carr_params.yml` only,
@@ -341,8 +294,7 @@ Tests under `/pipeline_and_tests/evals/` must pass before a monthly snapshot is 
 4. **Freeze invariant.** For any closed month `M`, re-running the pipeline from scratch produces byte-identical `mart_carr_by_*_month_end` rows for `M`.
 5. **Determinism.** Same inputs → same outputs. No `NOW()`-family functions or unseeded randomness anywhere in the metric layer.
 6. **No-null.** Published marts contain no rows with null `cARR`. Accounts without an active contract on `T` are absent, not null.
-7. **Ramp monotonicity (new in v0.6).** For any account `a` whose inputs are frozen except for `contract_age`, `HealthScore(a, T)` is monotone in `contract_age` **toward** `HealthScore_steady(a, T)` — either non-decreasing (if `HealthScore_steady < 1.00`) or non-increasing (if `HealthScore_steady > 1.00`). The blend never overshoots `HealthScore_steady`. This is tested in [spec 06 T4](06_evaluation_framework.md) as part of the monotonicity check.
-8. **Ramp collapse.** When `contract_age ≥ ramp_end(segment)` for every active contract of `a`, `HealthScore(a, T) = HealthScore_steady(a, T)` exactly — no residual ramp contribution. This guarantees steady-state accounts match v0.5 behavior bit-for-bit, so v0.5 comparability for regression tests remains intact.
+7. **Pre-signal trust.** For any account with an active contract but no posted usage (`trailing_90d_included = 0` or `consumed = NULL`), `HealthScore = 1.00`. Tested in [spec 06](06_evaluation_framework.md) T1d (normal/new accounts median HS) and in the DQ suite.
 
 ---
 
@@ -425,32 +377,27 @@ Two active overlapping contracts: original ($80K, 20K credits/mo) and expansion 
 | `expanded` | true |
 | modifier (expansion) | 1.05 |
 | `base × modifier` | 1.106 |
-| **`HealthScore_steady`** | **1.11** |
-| `contract_age` | 400 days (far past `ramp_end`) |
-| `w` | 1.00 |
 | **`HealthScore`** | **1.11** |
 | **`cARR`** | **$255,300** |
 
-### 8.6 New-logo Enterprise — worked at 4 points in time (new in v0.6)
+### 8.6 New-logo Enterprise — pre-signal trust
 
-An Enterprise contract signed 2026-02-15 for $600K ARR. The customer will eventually settle into healthy utilization (`HealthScore_steady ≈ 0.93`). Segment: `Enterprise` → `ramp_full = 30`, `ramp_end = 120`.
+An Enterprise contract signed 2026-04-10 for $600K ARR. As of `T = 2026-04-18` (8 days old), no daily usage has posted yet — `trailing_90d_included = 0` because the contract hadn't started on any of the 90 trailing days until the last 8. Per §3.6:
 
-We evaluate at four as-of dates — `T₀ = 2026-02-20` (5 days in), `T₁ = 2026-03-15` (28 days in), `T₂ = 2026-04-30` (74 days in), `T₃ = 2026-07-01` (136 days in, past ramp). Assume usage has started ramping and `HealthScore_steady` rises smoothly from 0.40 at T₀ to 0.93 at T₃ as adoption builds.
+| Input | Value |
+|---|---:|
+| `CommittedARR` | $600,000 |
+| `trailing_90d_included_credits` | 0 (effectively null — contract only 8d old) |
+| `trailing_90d_consumed_credits` | 0 |
+| `U` | undefined |
+| `base(U)` | 1.00 (pre-signal) |
+| modifier | 1.00 |
+| **`HealthScore`** | **1.00** |
+| **`cARR`** | **$600,000** |
 
-| As-of | `contract_age` | `HealthScore_steady` (computed) | `w` | `HealthScore` (final) | `cARR` |
-|---|---:|---:|---:|---:|---:|
-| T₀ 2026-02-20 | 5 | 0.40 | 0.00 | **1.00** | **$600,000** |
-| T₁ 2026-03-15 | 28 | 0.55 | 0.00 | **1.00** | **$600,000** |
-| T₂ 2026-04-30 | 74 | 0.78 | 0.49 | **0.89** | **$534,000** |
-| T₃ 2026-07-01 | 136 | 0.93 | 1.00 | **0.93** | **$558,000** |
+The rep earns full booking credit until the 90-day window contains enough contract days for a usage signal to exist. Once the account has 30+ days in the window, `U` becomes defined and `HealthScore` reflects actual adoption — no cliff, because the transition is continuous in `U`.
 
-Reading the table:
-
-- **T₀–T₁ (first 30 days).** The rep gets full booking credit. No usage signal is yet available that could legitimately discount the ARR; any discount would be punishing the rep for lag, not performance.
-- **T₂ (74 days in).** Blended. The adoption signal is real but not yet definitive; we give it half-weight. cARR has come down from $600K → $534K as the customer's slow ramp becomes visible.
-- **T₃ (136 days in, past ramp).** Full steady-state formula. The customer has reached healthy utilization (0.93); cARR settles at $558K. The rep finished the year at 93% of the booking — a fair reflection of a mostly-healthy account.
-
-**Without ramp protection**, T₀ would have been $240K (0.40 × $600K) on a contract that was literally 5 days old. The rep would have lost $360K in visible North Star value overnight, despite doing exactly the job the old comp plan paid them to do.
+**Compared to the v0.6 ramp-blended approach**, v0.7 surrenders the smooth linear hand-off from "full trust" to "steady state" that `w(contract_age)` provided. In exchange, every parameter disappears from the formula except `base(U)` knobs that every sales metric already has. A known residual: a contract that's 45 days old with legitimately slow adoption (say `U = 0.5`, `HealthScore_steady = 0.72`) scores 0.72 in v0.7 versus a blended ~0.86 in v0.6. If shadow-comp data shows this is harming reps systematically, add the simpler "grace floor" from §2.2 rather than restoring the full blend.
 
 ---
 
@@ -461,8 +408,8 @@ Reading the table:
 3. **Unlimited-tier / public-sector contracts.** If any contract has `included_monthly_compute_credits = 0`, `U` is undefined. Proposed carve-out: `HealthScore = 1.00`, excluded from anomaly detection, flagged separately. Pending CFO decision.
 4. **Leading-indicator companion.** `cARR` is trailing by construction. The comp plan will likely want a paired forward-looking indicator (pipeline-weighted forecast). Separate spec, deferred.
 5. **Multi-currency.** Out of scope for v1. See [spec 02 §12](02_data_model.md#12-open-questions).
-6. **Segment drift mid-ramp (new in v0.6).** If a rep changes segment (MM → ENT) while an account is still in ramp protection, which segment's ramp curve applies? Current spec: segment is resolved at `T`, so the ramp window changes mid-flight. Alternative: pin segment to contract start. Proposal: pin at contract start, to keep the rep's signed ramp bargain stable. Pending Sales Ops review.
-7. **Sequential-renewal uplift (new in v0.6).** §3.7 excludes back-to-back renewal uplift from the expansion credit. If shadow-comp data shows this is consistently reps landing legitimate expansion via non-overlapping renewal, revisit — possibly by extending the `expanded` definition to "new-contract ARR > prior-contract ARR within 30 days" regardless of overlap.
+6. **Sequential-renewal uplift.** §3.7 excludes back-to-back renewal uplift from the expansion credit. If shadow-comp data shows this is consistently reps landing legitimate expansion via non-overlapping renewal, revisit — possibly by extending the `expanded` definition to "new-contract ARR > prior-contract ARR within 30 days" regardless of overlap.
+7. **Grace floor for early adoption.** v0.7 removed the v0.6 ramp blend. If shadow-comp data shows early-stage adoption legitimately trails by 30–60 days and reps are being systematically penalized at `HealthScore < 1.00` during that window, consider adding a single-parameter grace floor — e.g., `HealthScore = max(HS, 0.80) if contract_age < 30d`. One knob, one threshold, one paragraph in the spec. Deferred until the data is in.
 
 ---
 
@@ -485,11 +432,9 @@ Reading the table:
 | Health Score only (0–100, no `$` anchor) | Same analytical content as cARR without the dollar anchor; CFO still needs dollars on page 1. Decision D01. |
 | ML-predicted churn score × ACV | No labeled training data; not explainable to reps; fails defensibility principle (§1.3). Decision D07. |
 | Weighted blend: `α·ARR + β·ConsumptionRev + γ·Trajectory` | More parameters to fight over in every comp cycle; multiplier form is bounded and simpler to defend. Decision D01. |
-| **No ramp protection** (v0.5 behavior) | Penalizes reps for adoption lag that is structurally outside their control; produces `0.40 × ARR` on day-1 bookings. Violates booking-fairness principle (§1.3 item 5). Decision D12. |
-| **Hard grace period then cliff** (e.g., `HealthScore = 1.00` for 90 days then snap to computed) | Creates a day-91 cliff that can move a rep's comp by tens of percent overnight. Fails stability principle. Decision D12. |
-| **Expected-ramp curve from historical data** (industry or internal calibration as denominator for `U`) | Requires historical adoption curves we don't have yet; adds an empirically fitted curve surface that the CFO cannot read off the rule. Revisit after one full quarter of shadow-comp data. Decision D12. |
-| **Single ramp curve across segments** | ENT and MM ramps differ by 2–3× in reality; forcing one curve either under-protects ENT or over-protects MM. Segment-aware defaults are the lower-regret choice. |
-| **Reset `contract_age` on every new contract** | Opens a gaming vector: a rep could induce a one-day contract gap at renewal to reset the ramp clock and re-earn 120 days of full booking trust. Anchor to oldest active contract instead (§3.7). |
+| **Ramp-blended HealthScore** (v0.6 behavior) | Smooth in principle but introduced four segment-specific knobs (`ramp_full`/`ramp_end` × MM/ENT) that every comp cycle would re-litigate. The `U IS NULL → base = 1.00` path in §3.6 preserves new-logo comp fairness without the blend. If shadow-comp data shows early-adoption reps harmed, add a single-parameter grace floor (§9 Q7) rather than restoring the full blend. |
+| **Hard grace period then cliff** (e.g., `HealthScore = 1.00` for 90 days then snap to computed) | Creates a day-91 cliff that can move a rep's comp by tens of percent overnight. Fails stability principle. |
+| **Reset `contract_age` on every new contract** | Opens a gaming vector on the spike-drop age guard: a rep could induce a one-day contract gap at renewal to reset the 90-day clock. Anchor to oldest active contract instead (§3.7). |
 
 ## Appendix B — Why the bounds are `[0.40, 1.30]` specifically
 
@@ -510,28 +455,24 @@ See [spec 10 — Glossary](10_glossary.md) for full definitions. Quick reference
 | `M₁(a, T)` | Month-1 consumption share |
 | `base(U)` | Piecewise utilization → base health mapping |
 | `modifier` | Pattern-triggered multiplier on `base` |
-| `HealthScore_steady(a, T)` | `clamp(base × modifier, 0.40, 1.30)` — the v0.5 formula |
-| `ramp_full(segment)`, `ramp_end(segment)` | Segment-aware ramp window parameters (§2.2) |
 | `contract_age(a, T)` | Days since `start_date` of `a`'s oldest active contract |
-| `w(contract_age, segment)` | Ramp blend weight in `[0, 1]` — see §2.1 |
-| `HealthScore(a, T)` | `(1 − w) × 1.00 + w × HealthScore_steady` — the v0.6 formula |
+| `HealthScore(a, T)` | `clamp(base(U) × modifier, 0.40, 1.30)` |
 | `CommittedARR(a, T)` | Sum of active-contract ARR for `a` on `T` |
 | `cARR(a, T)` | `CommittedARR × HealthScore` |
 
-## Appendix D — v0.5 → v0.6 change summary
+## Appendix D — v0.6 → v0.7 change summary
 
 | Section | Change | Reason |
 |---|---|---|
-| §1.3 | Added 5th guiding principle: **booking fairness** | New-logo unfairness was the largest unaddressed attack surface in v0.5 |
-| §2.1 | Introduced `HealthScore_steady` and a ramp-blended `HealthScore` | The core change — ramp protection for new-logo reps |
-| §2.2 (new) | Segment-aware `ramp_full` / `ramp_end` parameters | ENT and MM have structurally different ramp realities |
-| §2.3 | Added ramp-curve continuity tables | Defensibility — the blend is smooth and visible |
-| §3.6 | Added ramp-awareness rows to the null/zero table | Disambiguate shelfware-floor from ramp-blended-floor |
-| §3.7 (new) | Explicit renewal semantics | Most common rep question; needed a single-source answer |
-| §6 | 4 new rows for ramp parameters | Make the knobs reviewable |
-| §7 | 2 new invariants: ramp monotonicity, ramp collapse | Guarantee behavior; auto-testable |
-| §8.6 (new) | Worked example for an Enterprise new-logo across 4 time-points | The single most important example for the exec pitch |
-| §9 | 2 new open questions (segment drift, sequential-renewal uplift) | Surface the v0.6 residuals honestly |
-| Appendix A | 5 new rejected alternatives | Show the shape of the decision, not just the answer |
+| §2.1 | Removed ramp blend; `HealthScore = clamp(base × modifier, 0.40, 1.30)` | One-formula defensibility beats four extra knobs |
+| §2.2 | Replaced ramp-parameter table with a deprecation note | Close the door on the old knob set |
+| §2.3 | Removed the ramp-blend endpoint tables | The piecewise `base(U)` check is the only continuity check that remains |
+| §3.6 | Added explicit **pre-signal** row: `U` undefined → `HealthScore = 1.00` | Preserve new-logo comp fairness without the blend |
+| §3.7 | Renewal semantics table edited to drop ramp-reset language | Renewal semantics now only affect `contract_age` for the spike-drop age guard |
+| §6 | Dropped 4 ramp-parameter rows | Fewer knobs, smaller review surface |
+| §7 | Replaced ramp monotonicity + ramp collapse invariants with a **pre-signal trust** invariant | The new fairness guarantee |
+| §8.6 | Rewrote the new-logo example as a single pre-signal point | There's no blend to chart across time any more |
+| §9 | Dropped segment-drift; added grace-floor escape hatch (Q7) | Keep a known path back if data shows reps harmed |
+| Appendix A | Merged the four ramp-related rejections into one and kept the gaming-guard rejection | The gaming-guard reasoning still holds for the spike-drop age guard |
 
-All v0.5 worked examples (8.1–8.5) remain valid bit-for-bit because `contract_age ≥ ramp_end` in each — this is the Ramp collapse invariant (§7 item 8). v0.5 and v0.6 agree on steady-state accounts.
+All v0.6 worked examples (8.1–8.5) remain valid bit-for-bit because every example had `contract_age` past `ramp_end`, so `w = 1` and `HealthScore = HealthScore_steady` — identical to the v0.7 formula.

@@ -1,11 +1,15 @@
 -- metric_healthscore
---   Ref: specs/03_north_star_metric.md §2 (formula), §3 (modifiers),
---         §2.2 (ramp protection blend), D02, D12
+--   Ref: specs/03_north_star_metric.md §2 (formula), §3 (modifiers), D02
 --
---   Produces per-account HealthScore using the v0.6 blend:
---     HealthScore = (1 − w) × 1.00 + w × clamp(base(U) × modifier, FLOOR, CAP)
+--   Produces per-account HealthScore:
+--     HealthScore = clamp(base(U) × modifier, HS_FLOOR, HS_CAP)
 --
---   where w = ramp weight computed from contract_age_days and segment.
+--   v0.6 removed the ramp-blend (§2.2) — the segment-aware ramp windows
+--   were defensible in principle but noisy in practice and drew scope
+--   objections. v0.7 uses the steady-state formula directly for every
+--   active-contract account; new logos with no usage yet default to
+--   base = 1.00 via the `utilization_u IS NULL` branch, which keeps
+--   new-logo comp reasonable without a separate blend parameter.
 --
 --   Every input column is surfaced so the dashboard's "why is my score X?"
 --   widget (spec 07 §3, spec 11 §3.2) can cite them.
@@ -36,23 +40,7 @@ WITH base_with_ctx AS (
           WHEN a.n_active_contracts >= 2
                AND u.utilization_u > 1.00                              THEN {expansion_modifier}
           ELSE 1.00
-        END AS modifier,
-        -- ramp weight w(contract_age, segment) — D12
-        CASE
-          WHEN a.contract_age_days IS NULL                             THEN 1.00  -- no active contract: downstream filters this out
-          WHEN acc.segment = 'Enterprise' THEN
-            CASE
-              WHEN a.contract_age_days <= {ent_ramp_full}              THEN 0.0
-              WHEN a.contract_age_days >= {ent_ramp_end}               THEN 1.0
-              ELSE (a.contract_age_days - {ent_ramp_full}) * 1.0 / ({ent_ramp_end} - {ent_ramp_full})
-            END
-          ELSE  -- Mid-Market
-            CASE
-              WHEN a.contract_age_days <= {mm_ramp_full}               THEN 0.0
-              WHEN a.contract_age_days >= {mm_ramp_end}                THEN 1.0
-              ELSE (a.contract_age_days - {mm_ramp_full}) * 1.0 / ({mm_ramp_end} - {mm_ramp_full})
-            END
-        END AS ramp_w
+        END AS modifier
     FROM int_account_active_contracts a
     LEFT JOIN int_usage_rolled u USING (account_id)
     LEFT JOIN stg_accounts     acc USING (account_id)
@@ -68,11 +56,6 @@ SELECT
     expected_credits_90d,
     base_score,
     modifier,
-    ramp_w,
-    -- steady-state HS clamped to bounds (D02)
-    GREATEST({hs_floor}, LEAST({hs_cap}, base_score * modifier)) AS healthscore_steady,
-    -- blended HS: ramp protection
-    (1.0 - ramp_w) * 1.00
-      + ramp_w      * GREATEST({hs_floor}, LEAST({hs_cap}, base_score * modifier))
-      AS healthscore
+    -- HealthScore: steady-state, clamped to bounds (D02)
+    GREATEST({hs_floor}, LEAST({hs_cap}, base_score * modifier)) AS healthscore
 FROM base_with_ctx;

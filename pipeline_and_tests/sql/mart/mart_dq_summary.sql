@@ -17,7 +17,7 @@ SELECT
     (SELECT COUNT(*) FROM mart_carr_current WHERE band = 'at_risk_shelfware')         AS n_shelfware,
     (SELECT COUNT(*) FROM mart_carr_current WHERE band = 'spike_drop')                AS n_spike_drop,
     (SELECT COUNT(*) FROM mart_carr_current WHERE band = 'expansion')                 AS n_expansion,
-    (SELECT COUNT(*) FROM mart_carr_current WHERE band = 'ramping')                   AS n_ramping,
+    (SELECT COUNT(*) FROM mart_carr_current WHERE band = 'overage')                   AS n_overage,
     (SELECT COUNT(*) FROM mart_carr_current WHERE band = 'healthy')                   AS n_healthy,
     (SELECT SUM(committed_arr) FROM mart_carr_current)                                AS total_committed_arr,
     (SELECT SUM(carr) FROM mart_carr_current)                                         AS total_carr,

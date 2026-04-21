@@ -174,20 +174,20 @@ def build_contracts(accounts: pd.DataFrame, archetypes: dict[str, str]) -> pd.Da
         # Every account MUST be live on WINDOW_END (== as_of_date). Silent
         # account drop-outs from the metric aren't in the brief's anomaly
         # list — we keep all 1,000 in scope. Contract age (days between
-        # start_date and as_of_date) is sampled across three ramp buckets
-        # so the eval harness sees the full pre-ramp / ramping / post-ramp
-        # spectrum per segment:
-        #   pre      10–150d  — pre-ramp-end for both Enterprise and MM
-        #   ramping  151–364d — post-ramp-end MM, pre-ramp-end Enterprise
-        #   post     365–900d — post-ramp-end for both segments
+        # start_date and as_of_date) is sampled across three buckets so
+        # the eval harness sees a range of account maturities:
+        #   young    10–150d  — partial 90d window; T1d's maturity guard
+        #                       excludes these from the healthy-band check
+        #   mid      151–364d — full 90d window, still inside year one
+        #   mature   365–900d — year-plus, steady-state
         bucket = random.choices(
-            ["pre", "ramping", "post"],
+            ["young", "mid", "mature"],
             weights=[0.20, 0.30, 0.50],
             k=1,
         )[0]
-        if bucket == "pre":
+        if bucket == "young":
             contract_age = random.randint(10, 150)
-        elif bucket == "ramping":
+        elif bucket == "mid":
             contract_age = random.randint(151, 364)
         else:
             contract_age = random.randint(365, 900)

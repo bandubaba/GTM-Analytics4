@@ -109,7 +109,7 @@ def _fmt_rows(rows: pd.DataFrame):
         ):
             fmt[col] = "${:,.0f}"
         elif (
-            c in {"healthscore", "healthscore_steady", "base_score", "modifier", "ramp_w", "weighted_healthscore"}
+            c in {"healthscore", "base_score", "modifier", "weighted_healthscore"}
             or c.endswith("_healthscore")
             or c.endswith("_score")
         ):
@@ -248,8 +248,6 @@ def view_executive():
         "healthy": "#2ecc71",
         "expansion": "#1abc9c",
         "overage": "#16a085",
-        "watch": "#f39c12",
-        "ramping": "#3498db",
         "spike_drop": "#e67e22",
         "at_risk_shelfware": "#e74c3c",
     }
@@ -279,32 +277,21 @@ def view_executive():
             """
 The brief names **five input anomalies** the metric must handle
 (shelfware, spike-drop, consistent overage, mid-year expansion, orphans).
-The mart exposes **seven output bands** — four mapped 1:1 to the brief's
-anomalies, plus `healthy` (the baseline any classifier needs), `ramping`
-(new-logo comp protection), and `watch` (residual bucket for accounts
-whose current state doesn't match any archetype cleanly).
+The mart exposes **five output bands** — four mapped 1:1 to the brief's
+non-orphan anomalies, plus `healthy` as the baseline.
 
 **Mapped to the brief's anomalies:**
-- **at_risk_shelfware** — HealthScore ≤ 0.55. Covers the brief's
-  *shelfware* anomaly.
-- **spike_drop** — ≥ 70% of 90-day usage in month 1 and contract
-  age ≥ 90 days. Covers the brief's *spike-and-drop* anomaly.
-- **overage** — sustained utilization above included; customer is paying
-  overage. Covers the brief's *consistent overage* anomaly.
-- **expansion** — ≥ 2 overlapping contracts and utilization above
-  included. Covers the brief's *mid-year expansion* anomaly.
+- **at_risk_shelfware** — HealthScore ≤ 0.55. Covers *shelfware*.
+- **spike_drop** — ≥ 70% of trailing-90d usage in month 1 and contract
+  age ≥ 90 days. Covers *spike-and-drop*.
+- **overage** — utilization > 1.10 × included. Covers *consistent
+  overage*.
+- **expansion** — ≥ 2 overlapping contracts and utilization > 1.0.
+  Covers *mid-year expansion*.
 
-**Additional derived bands:**
-- **healthy** — HealthScore in [0.85, 1.15]. Baseline; not an anomaly.
-- **ramping** — contract age inside the segment's ramp window
-  (Enterprise 365d, Mid-Market 180d); HealthScore held near booking
-  trust per D12 (new-logo protection). **Comp-safety feature** —
-  without it, new logos would misclassify as shelfware and unfairly
-  penalize reps.
-- **watch** — residual bucket: HealthScore 0.55–0.85 but no specific
-  archetype pattern. CSMs review these manually. Forcing into
-  *healthy* would misrepresent; forcing into *at_risk* would cause
-  alert fatigue.
+**Baseline:**
+- **healthy** — everything else. The residual "no anomaly flagged"
+  bucket. Accounts here have no archetype pattern tripping.
 
 Orphan / rogue usage (the brief's 5th anomaly) is excluded upstream
 via `int_orphan_usage` and never reaches this band classifier —
@@ -337,7 +324,7 @@ def view_reps():
     st.dataframe(
         rf.sort_values("carr", ascending=False)[
             ["rep_name", "region", "segment", "n_accounts", "committed_arr", "carr",
-             "weighted_healthscore", "n_at_risk", "n_spike_drop", "n_expansion", "n_ramping"]
+             "weighted_healthscore", "n_at_risk", "n_spike_drop", "n_expansion", "n_overage"]
         ].style.format({"committed_arr": _money, "carr": _money, "weighted_healthscore": "{:.3f}"}),
         use_container_width=True,
         hide_index=True,
@@ -570,9 +557,7 @@ def view_account_drill():
             "m1_share": f"{row.m1_share:.3f}" if pd.notna(row.m1_share) else "—",
             "base(U)": f"{row.base_score:.3f}",
             "modifier": f"{row.modifier:.3f}",
-            "ramp_w": f"{row.ramp_w:.3f}",
-            "HS_steady": f"{row.healthscore_steady:.3f}",
-            "HS (blended)": f"{row.healthscore:.3f}",
+            "HealthScore": f"{row.healthscore:.3f}",
             "cARR": _money(row.carr),
         }]).T.rename(columns={0: "value"}),
         use_container_width=True,
@@ -603,8 +588,8 @@ def view_dq():
     st.markdown("### Band mix")
     st.dataframe(
         pd.DataFrame({
-            "band": ["at_risk_shelfware", "spike_drop", "expansion", "ramping", "healthy"],
-            "count": [dq.n_shelfware, dq.n_spike_drop, dq.n_expansion, dq.n_ramping, dq.n_healthy],
+            "band": ["at_risk_shelfware", "spike_drop", "expansion", "overage", "healthy"],
+            "count": [dq.n_shelfware, dq.n_spike_drop, dq.n_expansion, dq.n_overage, dq.n_healthy],
         }),
         hide_index=True,
         use_container_width=True,

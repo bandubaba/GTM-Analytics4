@@ -81,9 +81,9 @@ CANNED: list[dict[str, Any]] = [
         "narrate": lambda r: f"{len(r)} expansion accounts — sum of cARR ${r.carr.sum():,.0f}.",
     },
     {
-        "pattern": re.compile(r"ramp|new\s+logo|ramping", re.I),
-        "sql": "SELECT account_id, segment, committed_arr, carr, contract_age_days, ramp_w, healthscore FROM mart_carr_current WHERE band = 'ramping' ORDER BY contract_age_days",
-        "narrate": lambda r: f"{len(r)} ramping accounts protected by D12; youngest at {int(r.contract_age_days.iloc[0])}d." if len(r) else "No ramping accounts on the snapshot.",
+        "pattern": re.compile(r"new\s+logo|young\s+contract", re.I),
+        "sql": "SELECT account_id, segment, committed_arr, carr, contract_age_days, healthscore, band FROM mart_carr_current WHERE contract_age_days <= 60 ORDER BY contract_age_days",
+        "narrate": lambda r: f"{len(r)} accounts with contract age ≤ 60 days; median HS {r.healthscore.median():.2f}." if len(r) else "No young-contract accounts on the snapshot.",
     },
     {
         "pattern": re.compile(r"orphan|bad\s+data|out\s+of\s+window", re.I),
@@ -139,16 +139,16 @@ Table: mart_carr_current
   account_id TEXT, rep_id TEXT, region TEXT, segment TEXT, industry TEXT,
   n_active_contracts INT, committed_arr DOUBLE,
   utilization_u DOUBLE, m1_share DOUBLE,
-  base_score DOUBLE, modifier DOUBLE, ramp_w DOUBLE,
-  healthscore_steady DOUBLE, healthscore DOUBLE, carr DOUBLE,
+  base_score DOUBLE, modifier DOUBLE,
+  healthscore DOUBLE, carr DOUBLE,
   contract_age_days INT, oldest_active_start DATE, as_of_date DATE,
-  band TEXT  -- one of: healthy, mixed, at_risk_shelfware, spike_drop, expansion, overage, ramping
+  band TEXT  -- one of: healthy, at_risk_shelfware, spike_drop, expansion, overage
 
 Table: mart_carr_by_rep
   rep_id TEXT, rep_name TEXT, region TEXT, segment TEXT,
   n_accounts INT, committed_arr DOUBLE, carr DOUBLE,
   weighted_healthscore DOUBLE,
-  n_at_risk INT, n_spike_drop INT, n_expansion INT, n_ramping INT
+  n_at_risk INT, n_spike_drop INT, n_expansion INT, n_overage INT
 
 Table: mart_carr_by_region
   region TEXT, segment TEXT,
@@ -158,7 +158,7 @@ Table: mart_carr_by_region
 Table: mart_dq_summary (single row)
   n_accounts_in_metric, total_committed_arr, total_carr,
   weighted_healthscore, n_shelfware, n_spike_drop, n_expansion,
-  n_ramping, n_healthy, n_orphan_bad_account, n_orphan_out_of_window
+  n_overage, n_healthy, n_orphan_bad_account, n_orphan_out_of_window
 """
 
 SYSTEM_PROMPT = """You are a SQL generator for a cARR analytics product.
@@ -267,6 +267,6 @@ EXAMPLES: list[str] = [
     "Show me the shelfware accounts",
     "Any spike-drop accounts?",
     "Which accounts are expanding?",
-    "Which accounts are protected by ramp?",
+    "Show me new-logo accounts",
     "What's the data quality status?",
 ]

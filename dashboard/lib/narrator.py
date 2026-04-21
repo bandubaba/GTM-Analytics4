@@ -19,16 +19,13 @@ def _band_copy(band: str) -> str:
         "spike_drop":        "spike-drop pattern",
         "expansion":         "expanding",
         "overage":           "paying overage",
-        "ramping":           "early ramp",
         "healthy":           "healthy",
-        "watch":             "under review (mixed signals)",
     }.get(band, band)
 
 
 def _driver_line(row: pd.Series) -> str:
     """Return the single largest driver sentence."""
     u = row.utilization_u
-    age = row.contract_age_days
     band = row.band
     if band == "at_risk_shelfware":
         if pd.isna(u):
@@ -40,15 +37,15 @@ def _driver_line(row: pd.Series) -> str:
         return f"Utilization at {u:.0%} with {int(row.n_active_contracts)} overlapping contracts — the account is expanding."
     if band == "overage":
         return f"Utilization at {u:.0%}, consistently above included — the customer is paying overage."
-    if band == "ramping":
-        return f"Contract is only {int(age)} days old; ramp protection holds HealthScore at 1.00."
     if band == "healthy":
+        if pd.isna(u):
+            return "No usage data yet — HealthScore defaults to booking trust."
         return f"Utilization at {u:.0%}, within the healthy band; no anomaly flags tripped."
     return f"Utilization at {u:.0%}; modifier={row.modifier:.2f}."
 
 
 def narrate(row: pd.Series) -> str:
-    """3-sentence narrative (spec 11 §3.2 template)."""
+    """2-sentence narrative (spec 11 §3.2 template)."""
     if row is None or pd.isna(row.healthscore):
         return "No active contract on the snapshot date; metric not computed."
     s1 = (
@@ -56,11 +53,4 @@ def narrate(row: pd.Series) -> str:
         f"cARR is ${row.carr:,.0f} against Committed ARR of ${row.committed_arr:,.0f}."
     )
     s2 = _driver_line(row)
-    ramp_info = ""
-    if row.ramp_w < 1.0:
-        ramp_info = (
-            f" Ramp weight `w` = {row.ramp_w:.2f} (contract age {int(row.contract_age_days)}d, "
-            f"segment {row.segment}) — blended HealthScore is held closer to booking trust."
-        )
-    s3 = f"Steady-state HealthScore would be {row.healthscore_steady:.2f} absent ramp protection.{ramp_info}"
-    return f"{s1}\n\n{s2}\n\n{s3}"
+    return f"{s1}\n\n{s2}"

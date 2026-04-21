@@ -51,19 +51,15 @@ EXPANSION_MODIFIER: float = 1.05
 # Overage (paying over included credits, but not runaway): small positive, capped by HS_CAP
 OVERAGE_MODIFIER: float = 1.00  # neutral — the base(U) already rewards it
 
-# -------- ramp protection (D12, spec 03 §2.2) --------
-# Segment-aware ramp. contract_age is measured from the oldest active
-# contract on the account as of AS_OF_DATE (spec 03 §3.7) to prevent
-# gaming via renewal gaps.
-#
-# Blend: HealthScore = (1 − w) × 1.00 + w × HealthScore_steady
-#   w = 0.0 if age ≤ ramp_full
-#   w linear from 0 → 1 across (ramp_full, ramp_end)
-#   w = 1.0 if age ≥ ramp_end
-RAMP_PARAMS: dict[str, dict[str, int]] = {
-    "Mid-Market": {"ramp_full": 15, "ramp_end": 60},
-    "Enterprise": {"ramp_full": 30, "ramp_end": 120},
-}
+# -------- ramp protection --------
+# v0.6 included a segment-aware ramp blend (HS = (1 − w)·1.00 + w·HS_steady).
+# v0.7 removes it: the ramp windows were defensible in principle but
+# noisy in practice, and a blended metric is harder to explain than the
+# straight clamp(base × modifier). New logos without usage history hit
+# the `utilization_u IS NULL → base = 1.00` branch of base(U), which
+# gives a reasonable default without a separate blend parameter.
+# Kept this comment as a pointer so the deleted spec block (03 §2.2) is
+# discoverable in git history.
 
 # -------- pricing --------
 # Credits → dollars used for overage computation; matches data_generation/config.py.

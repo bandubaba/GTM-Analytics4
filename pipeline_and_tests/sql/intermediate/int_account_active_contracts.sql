@@ -1,6 +1,6 @@
 -- int_account_active_contracts
 --   Ref: specs/03_north_star_metric.md §3.7 (renewal semantics, overlapping),
---         D04 (overlap accumulates), D12 (contract_age = oldest active)
+--         D04 (overlap accumulates), D12b (contract_age = oldest active)
 --
 --   Per account, as of AS_OF_DATE:
 --     - active_committed_arr         = SUM of annual_commit_dollars over active contracts
@@ -8,7 +8,9 @@
 --     - n_active_contracts
 --     - oldest_active_start          = MIN(start_date) across active contracts
 --     - contract_age_days            = DATE_DIFF(as_of, oldest_active_start)
---                                      (gaming-resistant per D12)
+--                                      (gaming-resistant; originally D12,
+--                                       carried forward by D12b as the
+--                                       spike-drop age-gate anchor)
 
 CREATE OR REPLACE TABLE int_account_active_contracts AS
 SELECT

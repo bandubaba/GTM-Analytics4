@@ -16,7 +16,7 @@ SELECT
     SUM(CASE WHEN m.band = 'at_risk_shelfware' THEN 1 ELSE 0 END) AS n_at_risk,
     SUM(CASE WHEN m.band = 'spike_drop'        THEN 1 ELSE 0 END) AS n_spike_drop,
     SUM(CASE WHEN m.band = 'expansion'         THEN 1 ELSE 0 END) AS n_expansion,
-    SUM(CASE WHEN m.band = 'ramping'           THEN 1 ELSE 0 END) AS n_ramping
+    SUM(CASE WHEN m.band = 'overage'           THEN 1 ELSE 0 END) AS n_overage
 FROM stg_sales_reps r
 LEFT JOIN mart_carr_current m USING (rep_id)
 GROUP BY 1, 2, 3, 4;
